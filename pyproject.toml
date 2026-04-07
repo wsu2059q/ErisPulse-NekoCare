@@ -2,9 +2,8 @@
 name = "ErisPulse-NekoCare"
 version = "1.0.0"
 description = "NekoCare - 虚拟猫猫养成模块"
-readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["aiohttp"]
+dependencies = []
 
 [project.entry-points."erispulse.module"]
 "NekoCare" = "NekoCare:Main"
