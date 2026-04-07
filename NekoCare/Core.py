@@ -6,7 +6,7 @@ import aiohttp
 
 from ErisPulse import sdk
 from ErisPulse.Core.Bases import BaseModule
-from ErisPulse.Core.Event import command
+from ErisPulse.Core.Event import command, message
 
 DECAY_RATE = 3
 CRITICAL_TIMEOUT = 86400
@@ -328,37 +328,48 @@ BANK_FIXED_TERM = 86400
 BANK_FIXED_PENALTY = 0.2
 BANK_MAX_DEPOSIT = 10000
 BANK_MAX_LOAN_RATE = 0.1
+BANK_LOAN_CAP_RATIO = 2.0
+BANK_LOAN_CAP_ABSOLUTE = 5000
 
 ROB_COOLDOWN = 3600
+SIGNIN_BASE = 20
+SIGNIN_STREAK_BONUS = 10
+
+SIGNIN_TYPES = {
+    "signin": {"label": "签到", "coins": 20, "intimacy": 0},
+    "morning": {"label": "早安", "coins": 8, "intimacy": 2},
+    "noon": {"label": "午安", "coins": 8, "intimacy": 2},
+    "night": {"label": "晚安", "coins": 8, "intimacy": 2},
+}
 
 INVESTMENTS = [
     {
         "name": "稳健基金",
         "cost": 100,
-        "profit_min": 5,
-        "profit_max": 15,
-        "fail_rate": 0.1,
+        "profit_min": 10,
+        "profit_max": 25,
+        "fail_rate": 0.05,
     },
     {
         "name": "债券理财",
         "cost": 300,
-        "profit_min": 20,
-        "profit_max": 60,
-        "fail_rate": 0.15,
+        "profit_min": 30,
+        "profit_max": 80,
+        "fail_rate": 0.1,
     },
     {
         "name": "风险投资",
         "cost": 500,
-        "profit_min": 50,
-        "profit_max": 250,
-        "fail_rate": 0.3,
+        "profit_min": 60,
+        "profit_max": 300,
+        "fail_rate": 0.2,
     },
     {
-        "name": "豪赌一把",
+        "name": "运气投资",
         "cost": 1000,
-        "profit_min": 200,
-        "profit_max": 1000,
-        "fail_rate": 0.5,
+        "profit_min": 300,
+        "profit_max": 1500,
+        "fail_rate": 0.35,
     },
 ]
 
@@ -383,81 +394,132 @@ NPC_CATS = [
 ROB_NPC_LOOT = {"min": 10, "max": 50}
 
 HELP_TEXT = (
-    "=== 喵喵世界 · 游戏指南 ===\n\n"
+    "喵喵世界 · 游戏指南\n\n"
     "你领养一只小猫，在喵喵城生活。\n"
-    "上学、打工、存钱、投资、打劫，目标是成为富猫!\n\n"
-    "--- 属性系统 ---\n"
-    "智力: 影响学习速度和高薪工作收益加成\n"
-    "体力: 打工和打劫都会消耗，喂食/互动可恢复\n"
-    "魅力: 影响打劫成功率和部分工作收益\n"
-    "声望: 正声望→低贷款利率 | 负声望→被抓概率↑ | -30以下无法贷款\n\n"
+    "上学、打工、存钱、投资，目标是成为富猫!\n\n"
+    "--- 命令列表 ---\n"
+    "/猫猫 - 主菜单 (领养/交互式)\n"
+    "/猫猫状态 - 查看猫猫状态\n"
+    "/猫猫喂食 - 喂食/互动\n"
+    "/猫猫打工 - 打工/捡瓶子/捉虫/打劫\n"
+    "/猫猫银行 - 存款/贷款/股票/理财\n"
+    "/猫猫学习 - 学习深造\n"
+    "/猫猫背包 - 背包/商城\n"
+    "/猫图 - 随机猫图\n"
+    "/喵榜 - 排行榜\n\n"
+    "--- 每日签到 ---\n"
+    "消息中包含「早安/午安/晚安/签到」自动触发奖励\n"
+    "无需命令，直接说话就行!\n"
+    "签到: 每天领一次金币 (连续签到奖励更多!)\n"
+    "早安/午安/晚安: 各领一次，得少量金币+亲密度\n"
+    "全部完成额外奖励!\n\n"
     "--- 教育系统 ---\n"
     "学历: 喵喵小学→初中→高中→大专→大学→研究生院\n"
     "认真学习: 进度+25 智力+1~3 (推荐!)\n"
     "正常学习: 进度+15\n"
     "摸鱼: 进度+5 魅力+1~2 (偶尔扣智力)\n"
     "进度满100%且学费充足自动毕业，解锁更高薪工作!\n\n"
-    "--- 工作系统 ---\n"
-    "每级学历解锁不同岗位，共25+种职业\n"
-    "属性≥60对应工作额外加成15%收益\n"
-    "隐藏职业: 赏金猎猫(魅力60+声望20+) / 黑市中介(声望-30以下) / 猫窝设计师(智力60+魅力50+)\n\n"
+    "--- 赚钱方式 ---\n"
+    "打工: 每级学历解锁不同岗位，共25+种职业\n"
+    "属性>=60对应工作额外加成15%收益\n"
+    "捡瓶子: 10分钟冷却，零门槛小额收入\n"
+    "捉虫子: 10分钟冷却，高智力有稀有虫!\n"
+    "打劫野外NPC: 低风险，15分钟冷却\n"
+    "抓猫打工: @目标，中等风险，1小时冷却\n\n"
     "--- 喵喵银行 ---\n"
     "活期: 3%日息，随存随取\n"
     "定期: 8%日息，锁24h，提前取扣20%违约金\n"
-    "贷款: 额度=500×学历，声望影响利率\n"
+    "贷款: 额度=500x学历，利息上限为本金的2倍(最高5000)\n"
     "股票: 6只股票实时波动，低买高卖\n"
-    "理财: 4档风险(稳健基金/债券/风险投资/豪赌)\n\n"
-    "--- 打劫系统 ---\n"
-    "野外打劫: 15种NPC猫猫，低风险，15分钟冷却\n"
-    "玩家打劫: @目标，高风险高回报，1小时冷却\n"
-    "猫警: 声望越低被抓越容易，学历越高罚款越重\n"
-    "打劫会降低声望，注意平衡!\n\n"
+    "理财: 4档风险(稳健基金/债券/风险投资/运气投资)\n\n"
     "--- 生存系统 ---\n"
     "饱食度会随时间下降(3点/小时)\n"
     "饱食度归0进入危急状态，24h不救则饿死\n"
     "体力耗尽无法打劫，记得休息!\n\n"
     "--- 小贴士 ---\n"
-    "1. 先上学提升学历 → 解锁高薪工作\n"
-    "2. 打工赚到的钱存银行吃利息\n"
-    "3. 适当炒股/理财加速致富\n"
-    "4. 打劫来钱快但声望会暴跌\n"
-    "5. 保持好声望，贷款利率更低\n"
-    "6. 别忘了每天喂猫猫! /猫猫 进入主菜单\n\n"
+    "1. 每天签到+问候白拿金币!\n"
+    "2. 捡瓶子/捉虫子零门槛赚零花钱\n"
+    "3. 先上学提升学历 → 解锁高薪工作\n"
+    "4. 打工赚到的钱存银行吃利息\n"
+    "5. 适当炒股/理财加速致富\n"
+    "6. 贷款利息有上限，不会失控\n"
+    "7. 别忘了每天喂猫猫!\n\n"
     "!!! 注意 !!!\n"
     "弃养猫猫: 扣50%金币(最低200)、学历清零、属性重置、银行清空\n"
     "猫猫死亡: 扣30%金币(最低100)、体力-40、声望-15\n"
     "重新领养: 扣33%金币、学历清零、属性重置、银行清空"
 )
 
-MENU_STYLE = (
-    "padding:10px;border-radius:8px;font-size:14px;"
-    "line-height:1.6;font-family:sans-serif;"
-)
+CARD_THEMES = {
+    "menu": {
+        "accent": "#D4D4AA",
+        "bg": "#FFFFFF",
+        "header_color": "#2C2C2C",
+        "tag_bg": "#E8E8D0",
+        "border": "#E0E0E0",
+        "text": "#2C2C2C",
+        "text_sub": "#666666",
+    },
+    "status": {
+        "accent": "#9775fa",
+        "bg": "#FFFFFF",
+        "header_color": "#6741d9",
+        "tag_bg": "#F3F0FF",
+        "border": "#E0E0E0",
+        "text": "#2C2C2C",
+        "text_sub": "#666666",
+    },
+    "success": {
+        "accent": "#2E7D32",
+        "bg": "#E8F5E9",
+        "header_color": "#2E7D32",
+        "tag_bg": "#C8E6C9",
+        "border": "#C8E6C9",
+        "text": "#2C2C2C",
+        "text_sub": "#666666",
+    },
+    "warning": {
+        "accent": "#E65100",
+        "bg": "#FFF9DB",
+        "header_color": "#E65100",
+        "tag_bg": "#FFF3CD",
+        "border": "#FFE0B2",
+        "text": "#2C2C2C",
+        "text_sub": "#666666",
+    },
+    "danger": {
+        "accent": "#C62828",
+        "bg": "#FFEBEE",
+        "header_color": "#C62828",
+        "tag_bg": "#FFCDD2",
+        "border": "#FFCDD2",
+        "text": "#2C2C2C",
+        "text_sub": "#666666",
+    },
+    "death": {
+        "accent": "#adb5bd",
+        "bg": "#2d2d3a",
+        "header_color": "#dee2e6",
+        "tag_bg": "rgba(134,142,150,0.25)",
+        "border": "#404040",
+        "text": "#dee2e6",
+        "text_sub": "#adb5bd",
+    },
+    "info": {
+        "accent": "#1971c2",
+        "bg": "#FFFFFF",
+        "header_color": "#1971c2",
+        "tag_bg": "#E3F2FD",
+        "border": "#BBDEFB",
+        "text": "#2C2C2C",
+        "text_sub": "#666666",
+    },
+}
 
-HEADER_STYLE = "font-size:16px;font-weight:bold;margin-bottom:8px;color:#e91e63;"
-SUBHEADER_STYLE = (
-    "text-align:center;font-weight:bold;padding:6px 0;"
-    "color:#495057;border-bottom:2px solid #dee2e6;margin:8px 0;"
+_FONT = (
+    "font-family:'Inter',-apple-system,BlinkMacSystemFont,"
+    "'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;"
 )
-ITEM_STYLE = "padding:3px 6px;color:#495057;border-radius:4px;margin:1px 0;"
-KV_STYLE = "margin-bottom:2px;font-size:13px;"
-KV_KEY_STYLE = "color:#9e9e9e;"
-WARN_STYLE = (
-    "padding:8px 10px;background:#fff3cd;border-radius:6px;"
-    "font-size:13px;color:#856404;margin:6px 0;"
-)
-DANGER_STYLE = (
-    "padding:8px 10px;background:#f8d7da;border-radius:6px;"
-    "font-size:13px;color:#721c24;margin:6px 0;"
-)
-SUCCESS_STYLE = (
-    "padding:8px 10px;background:#d4edda;border-radius:6px;"
-    "font-size:13px;color:#155724;margin:6px 0;"
-)
-MUTED_STYLE = "color:#9e9e9e;font-size:13px;"
-BODY_STYLE = "margin-bottom:3px;font-size:14px;color:#343a40;"
-COL_STYLE = "display:flex;gap:8px;font-size:13px;font-family:monospace;"
-COL_ITEM_STYLE = "flex:1;white-space:pre;"
 
 
 class Main(BaseModule):
@@ -465,7 +527,8 @@ class Main(BaseModule):
         self.sdk = sdk
         self.logger = sdk.logger.get_child("NekoCare")
         self.config = self._load_config()
-        self._timed_out = False
+        self._timed_out_users: set = set()
+        self._last_msg_ids: Dict[str, str] = {}
         self.image_categories = {
             "neko": "https://nekos.best/api/v2/neko",
             "hug": "https://nekos.best/api/v2/hug",
@@ -495,6 +558,40 @@ class Main(BaseModule):
         async def menu_cmd(cmd_event):
             await self._handle_main_menu(cmd_event)
 
+        @command("猫猫状态", help="查看猫猫状态")
+        async def status_cmd(cmd_event):
+            user_id = cmd_event.get_user_id()
+            self._register_user(user_id, cmd_event.get_user_nickname() or "")
+            cat_data, status = self._apply_hunger_decay(user_id)
+            if not cat_data:
+                await self._send_reply(cmd_event, "你还没有猫猫呢~去 /猫猫 领养一只吧!")
+                return
+            await self._handle_status(cmd_event, cat_data, user_id)
+
+        @command("猫猫喂食", help="喂食/互动")
+        async def feed_cmd(cmd_event):
+            await self._cmd_ensure_alive(cmd_event, self._handle_feed_menu)
+
+        @command("猫猫打工", help="打工赚钱")
+        async def work_cmd(cmd_event):
+            await self._cmd_ensure_alive(cmd_event, self._handle_earn_menu)
+
+        @command("猫猫银行", help="喵喵银行")
+        async def bank_cmd(cmd_event):
+            user_id = cmd_event.get_user_id()
+            self._register_user(user_id, cmd_event.get_user_nickname() or "")
+            await self._handle_bank(cmd_event, user_id)
+
+        @command("猫猫学习", help="学习深造")
+        async def study_cmd(cmd_event):
+            await self._cmd_ensure_alive(cmd_event, self._handle_study)
+
+        @command("猫猫背包", help="背包/商城")
+        async def bag_cmd(cmd_event):
+            user_id = cmd_event.get_user_id()
+            self._register_user(user_id, cmd_event.get_user_nickname() or "")
+            await self._handle_bag_menu(cmd_event, user_id)
+
         @command("猫图", help="随机猫图")
         async def cat_image_cmd(cmd_event):
             categories = list(self.image_categories.keys())
@@ -503,7 +600,7 @@ class Main(BaseModule):
             if url:
                 await self._send_reply(cmd_event, "随机猫图", image_url=url)
             else:
-                await self._send_reply(cmd_event, "获取图片失败~")
+                await self._send_reply(cmd_event, "获取图片失败~", card_type="danger")
 
         @command("喵榜", help="查看排行榜")
         async def leaderboard_cmd(cmd_event):
@@ -511,31 +608,120 @@ class Main(BaseModule):
 
         @command("喵喵帮助", help="喵喵世界游戏指南")
         async def help_cmd(cmd_event):
-            await self._send_reply(cmd_event, HELP_TEXT)
+            await self._send_reply(cmd_event, HELP_TEXT, card_type="info")
+
+        @message.on_message()
+        async def greeting_handler(msg_event):
+            text = msg_event.get_text().strip()
+            if not text:
+                return
+            keyword_map = {
+                "早安": "morning",
+                "午安": "noon",
+                "晚安": "night",
+                "签到": "signin",
+            }
+            for keyword, key in keyword_map.items():
+                if keyword in text:
+                    user_id = msg_event.get_user_id()
+                    self._register_user(user_id, msg_event.get_user_nickname() or "")
+                    cat_data = self._get_cat(user_id)
+                    if key == "signin":
+                        await self._handle_signin(msg_event, user_id, cat_data)
+                    else:
+                        await self._quick_greeting(msg_event, key)
+                    return
 
         self.logger.info("NekoCare 模块加载成功")
 
     async def on_unload(self, event):
         self.logger.info("NekoCare 模块已卸载")
 
-    # ================================================================
-    #  菜单处理
-    # ================================================================
+    async def _cmd_ensure_alive(self, event, handler):
+        user_id = event.get_user_id()
+        self._register_user(user_id, event.get_user_nickname() or "")
+        cat_data, status = self._apply_hunger_decay(user_id)
+        if not cat_data:
+            await self._send_reply(event, "你还没有猫猫呢~去 /猫猫 领养一只吧!")
+            return
+        if status == "dead":
+            await self._send_dead_message(event, cat_data)
+            return
+        if status == "critical":
+            await self._send_critical_message(event, cat_data)
+            return
+        if status == "fostered":
+            await self._send_reply(event, "猫猫正在寄养中~用 /猫猫 接它回家")
+            return
+        await handler(event, user_id, cat_data)
 
-    async def _wait(self, event, timeout=60):
-        reply = await event.wait_reply(timeout=timeout)
-        if not reply:
-            self._timed_out = True
-            return None
-        return reply.get_text().strip()
+    # =============================================================
+    #  菜单处理
+    # =============================================================
+
+    async def _wait_choice(
+        self,
+        event,
+        timeout=60,
+        choices: list = None,
+        expect: str = None,
+        min_val: int = None,
+        max_val: int = None,
+    ):
+        user_id = event.get_user_id()
+        max_fail = 3
+        fail_count = 0
+        while True:
+            reply = await event.wait_reply(timeout=timeout)
+            if not reply:
+                self._timed_out_users.add(user_id)
+                return None
+            text = reply.get_text().strip()
+            if not text:
+                continue
+
+            if choices is not None:
+                if text in choices:
+                    return text
+                fail_count += 1
+                if fail_count >= max_fail:
+                    self._timed_out_users.add(user_id)
+                    return None
+                continue
+
+            if expect == "int":
+                try:
+                    val = int(text)
+                except ValueError:
+                    fail_count += 1
+                    if fail_count >= max_fail:
+                        self._timed_out_users.add(user_id)
+                        return None
+                    continue
+                if min_val is not None and val < min_val:
+                    fail_count += 1
+                    if fail_count >= max_fail:
+                        self._timed_out_users.add(user_id)
+                        return None
+                    continue
+                if max_val is not None and val > max_val:
+                    fail_count += 1
+                    if fail_count >= max_fail:
+                        self._timed_out_users.add(user_id)
+                        return None
+                    continue
+                return val
+
+            return text
 
     async def _handle_main_menu(self, event):
         user_id = event.get_user_id()
-        self._timed_out = False
+        self._timed_out_users.discard(user_id)
+        self._last_msg_ids.pop(user_id, None)
         self._register_user(user_id, event.get_user_nickname() or "")
 
         while True:
-            if self._timed_out:
+            if user_id in self._timed_out_users:
                 break
 
             cat_data, status = self._apply_hunger_decay(user_id)
@@ -553,17 +739,10 @@ class Main(BaseModule):
                 menu = f"{header}\n\n1. 领养一只小猫猫\n0. 退出"
                 await self._send_reply(event, menu)
 
-                choice = await self._wait(event)
-                if not choice:
+                choice = await self._wait_choice(event, choices=["0", "1"])
+                if choice is None or choice == "0":
                     break
-                if choice == "0":
-                    break
-                elif choice == "1":
-                    await self._handle_adopt(event)
-                else:
-                    await self._send_reply(event, "无效选项，请重新选择")
-
-            elif status == "critical":
+                await self._handle_adopt(event)
                 critical_hours = self._get_critical_remaining(cat_data)
                 menu = (
                     f"[{cat_data['name']}] 在宠物医院!  金币:{coins}\n\n"
@@ -576,19 +755,15 @@ class Main(BaseModule):
                 )
                 await self._send_reply(event, menu)
 
-                choice = await self._wait(event)
-                if not choice:
+                choice = await self._wait_choice(event, choices=["0", "1", "2", "3"])
+                if choice is None or choice == "0":
                     break
-                if choice == "0":
-                    break
-                elif choice == "1":
+                if choice == "1":
                     await self._handle_rescue(event, user_id)
                 elif choice == "2":
                     await self._handle_status(event, cat_data, user_id)
                 elif choice == "3":
                     await self._handle_bag_menu(event, user_id)
-                else:
-                    await self._send_reply(event, "无效选项，请重新选择")
 
             elif status == "fostered":
                 foster_days = self._get_foster_days(cat_data)
@@ -604,19 +779,15 @@ class Main(BaseModule):
                 )
                 await self._send_reply(event, menu)
 
-                choice = await self._wait(event)
-                if not choice:
+                choice = await self._wait_choice(event, choices=["0", "1", "2", "3"])
+                if choice is None or choice == "0":
                     break
-                if choice == "0":
-                    break
-                elif choice == "1":
+                if choice == "1":
                     await self._handle_unfoster(event, user_id, cat_data)
                 elif choice == "2":
                     await self._handle_status(event, cat_data, user_id)
                 elif choice == "3":
                     await self._handle_bag_menu(event, user_id)
-                else:
-                    await self._send_reply(event, "无效选项，请重新选择")
 
             else:
                 fullness = cat_data["fullness"]
@@ -629,60 +800,57 @@ class Main(BaseModule):
                     f"饱食度: {fl}  金币:{coins}  学历:{edu_name}\n"
                     f"{attr_line}\n\n"
                     f"1. 查看状态\n"
-                    f"2. 打工\n"
-                    f"3. 抓猫打工\n"
-                    f"4. 打劫\n"
-                    f"5. 喂食/互动\n"
+                    f"2. 喂食/互动\n"
+                    f"3. 赚钱\n"
+                    f"4. 喵喵银行\n"
+                    f"5. 学习深造\n"
                     f"6. 背包/商城\n"
-                    f"7. 喵喵银行\n"
-                    f"8. 学习深造\n"
-                    f"9. 寄养猫猫\n"
-                    f"10. 其他设置\n"
-                    f"0. 退出"
+                    f"7. 其他\n"
+                    f"0. 退出\n\n"
+                    f"快捷命令: /猫猫状态 /猫猫喂食 /猫猫打工\n"
+                    f"  /猫猫银行 /猫猫学习 /猫猫背包"
                 )
                 await self._send_reply(event, menu)
 
-                choice = await self._wait(event)
-                if not choice:
+                choice = await self._wait_choice(
+                    event,
+                    choices=["0", "1", "2", "3", "4", "5", "6", "7"],
+                )
+                if choice is None or choice == "0":
                     break
-                if choice == "0":
-                    break
-                elif choice == "1":
+                if choice == "1":
                     await self._handle_status(event, cat_data, user_id)
                 elif choice == "2":
-                    await self._handle_work(event, user_id)
-                elif choice == "3":
-                    await self._handle_catch(event, user_id)
-                elif choice == "4":
-                    await self._handle_rob(event, user_id)
-                elif choice == "5":
                     await self._handle_feed_menu(event, user_id)
+                elif choice == "3":
+                    await self._handle_earn_menu(event, user_id, cat_data)
+                elif choice == "4":
+                    await self._handle_bank(event, user_id)
+                elif choice == "5":
+                    await self._handle_study(event, user_id)
                 elif choice == "6":
                     await self._handle_bag_menu(event, user_id)
                 elif choice == "7":
-                    await self._handle_bank(event, user_id)
-                elif choice == "8":
-                    await self._handle_study(event, user_id)
-                elif choice == "9":
-                    await self._handle_foster(event, user_id, cat_data)
-                elif choice == "10":
-                    await self._handle_settings_menu(event, user_id, cat_data)
-                else:
-                    await self._send_reply(event, "无效选项，请重新选择")
+                    await self._handle_other_menu(event, user_id, cat_data)
 
-        nickname = event.get_user_nickname() or user_id
-        cat_data_exit = self._get_cat(user_id)
-        if cat_data_exit:
-            exit_msg = (
-                f"{nickname}，[{cat_data_exit['name']}] 在等你回来哦~ 下次再来玩~"
-            )
-        else:
-            exit_msg = f"{nickname}，快去领养一只小猫猫吧~"
-        await self._send_reply(event, exit_msg)
+        explicit_exit = user_id not in self._timed_out_users
+        self._timed_out_users.discard(user_id)
+        self._last_msg_ids.pop(user_id, None)
+
+        if explicit_exit:
+            nickname = event.get_user_nickname() or user_id
+            cat_data_exit = self._get_cat(user_id)
+            if cat_data_exit:
+                exit_msg = (
+                    f"[{cat_data_exit['name']}] 在等你回来哦~\n{nickname}，下次再来玩~"
+                )
+            else:
+                exit_msg = f"{nickname}，快去领养一只小猫猫吧~"
+            await self._send_reply(event, exit_msg, card_type="info", force_new=True)
 
     async def _handle_feed_menu(self, event, user_id):
         while True:
-            if self._timed_out:
+            if user_id in self._timed_out_users:
                 return
             cat_data, status = self._apply_hunger_decay(user_id)
             if not cat_data or status != "alive":
@@ -713,23 +881,338 @@ class Main(BaseModule):
             )
             await self._send_reply(event, menu)
 
-            choice = await self._wait(event)
-            if not choice:
+            choice = await self._wait_choice(event, choices=["0", "1", "2", "3"])
+            if choice is None or choice == "0":
                 return
-            if choice == "0":
-                return
-            elif choice == "1":
+            if choice == "1":
                 await self._do_feed(event, user_id, cat_data)
             elif choice == "2":
                 await self._do_cuddle(event, user_id, cat_data)
             elif choice == "3":
                 await self._do_pat(event, user_id, cat_data)
-            else:
-                await self._send_reply(event, "无效选项")
+
+    async def _handle_earn_menu(self, event, user_id, cat_data):
+        while True:
+            if user_id in self._timed_out_users:
+                return
+            now = time.time()
+            last_work = self._get_work_cooldown(user_id)
+            work_ready = (now - last_work) >= 1800
+            last_catch = self._get_catch_cooldown(user_id)
+            catch_ready = (now - last_catch) >= 3600
+            last_rob = self._get_rob_cooldown(user_id)
+            rob_ready = (now - last_rob) >= ROB_COOLDOWN
+            last_scavenge = self._get_scavenge_cooldown(user_id)
+            scavenge_ready = (now - last_scavenge) >= 600
+
+            wr = "✓" if work_ready else f"{int((1800 - (now - last_work)) // 60) + 1}分"
+            cr = (
+                "✓"
+                if catch_ready
+                else f"{int((3600 - (now - last_catch)) // 60) + 1}分"
+            )
+            rr = (
+                "✓"
+                if rob_ready
+                else f"{int((ROB_COOLDOWN - (now - last_rob)) // 60) + 1}分"
+            )
+            sr = (
+                "✓"
+                if scavenge_ready
+                else f"{int((600 - (now - last_scavenge)) // 60) + 1}分"
+            )
+
+            menu = (
+                f"赚钱\n\n"
+                f"1. 打工 ({wr})\n"
+                f"2. 抓猫打工 ({cr})\n"
+                f"3. 打劫 ({rr})\n"
+                f"4. 捡瓶子 ({sr})\n"
+                f"5. 摸鱼捉虫 ({sr})\n"
+                f"0. 返回"
+            )
+            await self._send_reply(event, menu)
+
+            choice = await self._wait_choice(
+                event, choices=["0", "1", "2", "3", "4", "5"]
+            )
+            if choice is None or choice == "0":
+                return
+            elif choice == "1":
+                await self._handle_work(event, user_id)
+            elif choice == "2":
+                await self._handle_catch(event, user_id)
+            elif choice == "3":
+                await self._handle_rob(event, user_id)
+            elif choice == "4":
+                await self._handle_scavenge(event, user_id, cat_data)
+            elif choice == "5":
+                await self._handle_bugcatch(event, user_id, cat_data)
+
+    async def _quick_greeting(self, event, key: str):
+        user_id = event.get_user_id()
+        self._register_user(user_id, event.get_user_nickname() or "")
+        now = time.time()
+        today = time.strftime("%Y%m%d", time.localtime(now))
+        signin_data = self._get_signin_data(user_id)
+        if signin_data.get("last_date") != today:
+            signin_data["streak"] = signin_data.get("streak", 0) + 1
+            signin_data["last_date"] = today
+            signin_data["today"] = {}
+            self._set_signin_data(user_id, signin_data)
+
+        today_done = signin_data.get("today", {})
+        if today_done.get(key, False):
+            return
+
+        info = SIGNIN_TYPES[key]
+        self._add_coins(user_id, info["coins"])
+
+        cat_data = self._get_cat(user_id)
+        ig = 0
+        if cat_data and cat_data.get("status") == "alive":
+            ig = info["intimacy"]
+            cat_data["intimacy"] = min(100, cat_data["intimacy"] + ig)
+            self.sdk.storage.set(f"nekocare:{user_id}", cat_data)
+
+        today_done[key] = True
+        signin_data["today"] = today_done
+        self._set_signin_data(user_id, signin_data)
+
+        has_cat = cat_data is not None
+        if has_cat:
+            cat_name = cat_data["name"]
+        else:
+            cat_name = None
+
+        nickname = event.get_user_nickname() or user_id
+
+        if key == "morning":
+            greetings = [f"早安呀~", f"早上好!", f"新的一天开始啦!"]
+        elif key == "noon":
+            greetings = [f"午安~", f"中午好!", f"吃午饭了吗?"]
+        else:
+            greetings = [f"晚安~", f"晚安好梦!", f"早点休息哦~"]
+
+        greet = random.choice(greetings)
+        reward_text = f"+{info['coins']}金币"
+        if ig > 0:
+            reward_text += f" +{ig}亲密度"
+
+        if has_cat:
+            text = f"{greet}\n\n[{cat_name}]向你{info['label']}\n{reward_text}"
+        else:
+            text = (
+                f"{greet}\n\n"
+                f"{nickname}，{info['label']}!\n"
+                f"{reward_text}\n\n"
+                f"你还没有猫猫哦，试试 /猫猫 领养一只吧~"
+            )
+
+        img_key = "wave"
+        if key == "morning":
+            img_key = "smile"
+        elif key == "night":
+            img_key = "sleep"
+
+        url = await self._fetch_image(img_key)
+        await self._send_reply(
+            event, text, image_url=url, card_type="success", force_new=True
+        )
+
+    async def _handle_signin(self, event, user_id, cat_data):
+        now = time.time()
+        today = time.strftime("%Y%m%d", time.localtime(now))
+        signin_data = self._get_signin_data(user_id)
+        streak = signin_data.get("streak", 0)
+        last_date = signin_data.get("last_date", "")
+
+        if last_date != today:
+            streak += 1
+            signin_data["streak"] = streak
+            signin_data["last_date"] = today
+            signin_data["today"] = {}
+            self._set_signin_data(user_id, signin_data)
+
+        today_done = signin_data.get("today", {})
+        key = "signin"
+
+        if today_done.get(key, False):
+            await self._send_reply(
+                event, "今天已经签过啦~明天再来!", card_type="warning", force_new=True
+            )
+            return
+
+        bonus = SIGNIN_BASE + (streak - 1) * SIGNIN_STREAK_BONUS
+        self._add_coins(user_id, bonus)
+        today_done[key] = True
+        signin_data["today"] = today_done
+        self._set_signin_data(user_id, signin_data)
+
+        all_keys = list(SIGNIN_TYPES.keys())
+        all_done = all(today_done.get(k, False) for k in all_keys)
+        extra = 0
+        if all_done:
+            extra = streak * 2
+            self._add_coins(user_id, extra)
+
+        nickname = event.get_user_nickname() or user_id
+        has_cat = cat_data is not None and cat_data.get("status") == "alive"
+
+        text = f"签到成功! 第{streak}天连续签到\n+{bonus}金币"
+        if extra > 0:
+            text += f"\n今日全部完成! 额外+{extra}金币"
+        if has_cat:
+            text += f"\n\n[{cat_data['name']}] 在等你回来哦~"
+        else:
+            text += f"\n\n{nickname}，你还没有猫猫，试试 /猫猫 领养一只吧~"
+
+        url = await self._fetch_image("happy")
+        await self._send_reply(
+            event, text, image_url=url, card_type="success", force_new=True
+        )
+
+    async def _handle_other_menu(self, event, user_id, cat_data):
+        while True:
+            if user_id in self._timed_out_users:
+                return
+            active_title = self._get_active_title(user_id)
+            title_text = f" [{active_title}]" if active_title else ""
+            menu = (
+                f"其他\n"
+                f"当前猫猫: [{cat_data['name']}]{title_text}\n\n"
+                "1. 寄养猫猫\n"
+                "2. 改名\n"
+                "3. 查看/设置头衔\n"
+                "4. 弃养猫猫\n"
+                "0. 返回"
+            )
+            await self._send_reply(event, menu)
+
+            choice = await self._wait_choice(event, choices=["0", "1", "2", "3", "4"])
+            if choice is None or choice == "0":
+                return
+            elif choice == "1":
+                await self._handle_foster(event, user_id, cat_data)
+            elif choice == "2":
+                await self._handle_rename(event, user_id, cat_data)
+            elif choice == "3":
+                await self._handle_titles(event, user_id)
+            elif choice == "4":
+                if await self._handle_abandon(event, user_id, cat_data):
+                    return
+            menu = "其他\n\n1. 寄养猫猫\n2. 改名/头衔\n3. 弃养猫猫\n0. 返回"
+            await self._send_reply(event, menu)
+
+            choice = await self._wait_choice(event, choices=["0", "1", "2", "3"])
+            if choice is None or choice == "0":
+                return
+            elif choice == "1":
+                await self._handle_foster(event, user_id, cat_data)
+            elif choice == "2":
+                await self._handle_rename(event, user_id, cat_data)
+            elif choice == "3":
+                if await self._handle_abandon(event, user_id, cat_data):
+                    return
+
+    async def _handle_scavenge(self, event, user_id, cat_data):
+        cat_data, status = self._apply_hunger_decay(user_id)
+        if not cat_data:
+            await self._send_reply(event, "你还没有猫猫呢~", card_type="danger")
+            return
+        if status != "alive":
+            await self._send_reply(event, "猫猫状态不对，无法外出~")
+            return
+
+        now = time.time()
+        last = self._get_scavenge_cooldown(user_id)
+        remaining = 600 - (now - last)
+        if remaining > 0:
+            m = int(remaining // 60) + 1
+            await self._send_reply(event, f"猫猫刚捡完，{m}分钟后再来~")
+            return
+
+        attrs = self._get_attrs(user_id)
+        finds = [
+            ("几个空瓶子", random.randint(2, 8)),
+            ("一张旧报纸", random.randint(1, 3)),
+            ("别人掉的硬币", random.randint(3, 12)),
+            ("一个好看的石头", random.randint(2, 6)),
+            ("一罐过期的猫粮", random.randint(1, 4)),
+            ("一只手套", random.randint(1, 5)),
+        ]
+        if attrs["cha"] >= 30:
+            finds.append(("一张钞票", random.randint(8, 20)))
+        if attrs["cha"] >= 60:
+            finds.append(("一个红包!", random.randint(15, 35)))
+
+        item_name, coins = random.choice(finds)
+        cat_data["fullness"] = max(0, cat_data["fullness"] - random.randint(1, 3))
+        self.sdk.storage.set(f"nekocare:{user_id}", cat_data)
+        self._add_coins(user_id, coins)
+        self._set_scavenge_cooldown(user_id)
+        self._mod_attr(user_id, "hp", -random.randint(1, 3))
+
+        url = await self._fetch_image("happy")
+        msgs = [
+            f"[{cat_data['name']}] 在路边捡到了【{item_name}】!\n卖了 {coins} 金币~",
+            f"[{cat_data['name']}] 叼回了【{item_name}】!\n换了 {coins} 金币!",
+        ]
+        await self._send_reply(
+            event, random.choice(msgs), image_url=url, card_type="success"
+        )
+
+    async def _handle_bugcatch(self, event, user_id, cat_data):
+        cat_data, status = self._apply_hunger_decay(user_id)
+        if not cat_data:
+            await self._send_reply(event, "你还没有猫猫呢~", card_type="danger")
+            return
+        if status != "alive":
+            await self._send_reply(event, "猫猫状态不对~")
+            return
+
+        now = time.time()
+        last = self._get_scavenge_cooldown(user_id)
+        remaining = 600 - (now - last)
+        if remaining > 0:
+            m = int(remaining // 60) + 1
+            await self._send_reply(event, f"猫猫刚玩完，{m}分钟后再来~")
+            return
+
+        attrs = self._get_attrs(user_id)
+        bugs = [
+            ("一只蝴蝶", random.randint(1, 5)),
+            ("一只蚂蚱", random.randint(1, 4)),
+            ("一只蜻蜓", random.randint(2, 6)),
+            ("一条毛毛虫", random.randint(0, 3)),
+            ("一只甲虫", random.randint(2, 5)),
+        ]
+        if attrs["int"] >= 30:
+            bugs.append(("一只漂亮的瓢虫", random.randint(5, 12)))
+        if attrs["int"] >= 60:
+            bugs.append(("一只罕见的萤火虫!", random.randint(10, 25)))
+
+        caught = random.choice(bugs)
+        bug_name, coins = caught
+        cat_data["fullness"] = max(0, cat_data["fullness"] - random.randint(1, 2))
+        self.sdk.storage.set(f"nekocare:{user_id}", cat_data)
+        self._add_coins(user_id, coins)
+        self._set_scavenge_cooldown(user_id)
+        self._mod_attr(user_id, "int", random.randint(0, 1))
+        self._mod_attr(user_id, "hp", -random.randint(1, 2))
+
+        url = await self._fetch_image("happy")
+        msgs = [
+            f"[{cat_data['name']}] 捉到了【{bug_name}】!\n卖了 {coins} 金币~",
+            f"[{cat_data['name']}] 扑腾半天抓到【{bug_name}】!\n赚了 {coins} 金币!",
+        ]
+        await self._send_reply(
+            event, random.choice(msgs), image_url=url, card_type="success"
+        )
 
     async def _handle_bag_menu(self, event, user_id):
         while True:
-            if self._timed_out:
+            if user_id in self._timed_out_users:
                 return
             coins = self._get_coins(user_id)
             bag_text = self._build_bag_display(user_id, coins)
@@ -738,12 +1221,10 @@ class Main(BaseModule):
             full = f"{bag_text}{actions}"
             await self._send_reply(event, full)
 
-            choice = await self._wait(event)
-            if not choice:
+            choice = await self._wait_choice(event, choices=["0", "1", "2", "3", "4"])
+            if choice is None or choice == "0":
                 return
-            if choice == "0":
-                return
-            elif choice == "1":
+            if choice == "1":
                 await self._handle_use_item(event, user_id)
             elif choice == "2":
                 await self._handle_shop_menu(event, user_id)
@@ -751,64 +1232,23 @@ class Main(BaseModule):
                 await self._show_buffs(event, user_id)
             elif choice == "4":
                 await self._handle_titles(event, user_id)
-            else:
-                await self._send_reply(event, "无效选项")
 
     async def _handle_shop_menu(self, event, user_id):
         while True:
-            if self._timed_out:
+            if user_id in self._timed_out_users:
                 return
             coins = self._get_coins(user_id)
             shop_text = self._build_shop_display(coins)
             shop_text += "\n输入编号购买 | 0 返回"
             await self._send_reply(event, shop_text)
 
-            choice = await self._wait(event)
-            if not choice:
-                return
-            if choice == "0":
-                return
-
-            try:
-                idx = int(choice) - 1
-                if 0 <= idx < len(SHOP_ITEM_LIST):
-                    await self._do_buy(event, user_id, SHOP_ITEM_LIST[idx])
-                    return
-                else:
-                    await self._send_reply(event, "无效编号")
-            except ValueError:
-                await self._send_reply(event, "请输入数字编号")
-
-    async def _handle_settings_menu(self, event, user_id, cat_data):
-        while True:
-            if self._timed_out:
-                return
-            active_title = self._get_active_title(user_id)
-            title_text = f" [{active_title}]" if active_title else ""
-            menu = (
-                f"其他设置\n"
-                f"当前猫猫: [{cat_data['name']}]{title_text}\n\n"
-                f"1. 改名\n"
-                f"2. 查看/设置头衔\n"
-                f"3. 弃养猫猫\n"
-                f"0. 返回"
+            choice = await self._wait_choice(
+                event, expect="int", min_val=0, max_val=len(SHOP_ITEM_LIST)
             )
-            await self._send_reply(event, menu)
-
-            choice = await self._wait(event)
-            if not choice:
+            if choice is None or choice == 0:
                 return
-            if choice == "0":
-                return
-            elif choice == "1":
-                await self._handle_rename(event, user_id, cat_data)
-            elif choice == "2":
-                await self._handle_titles(event, user_id)
-            elif choice == "3":
-                if await self._handle_abandon(event, user_id, cat_data):
-                    return
-            else:
-                await self._send_reply(event, "无效选项")
+            idx = choice - 1
+            await self._do_buy(event, user_id, SHOP_ITEM_LIST[idx])
 
     async def _handle_use_item(self, event, user_id):
         inventory = self._get_inventory(user_id)
@@ -825,23 +1265,19 @@ class Main(BaseModule):
             await self._send_reply(event, "背包空空如也~去商城逛逛吧!")
             return
 
-        lines = [f"=== 使用道具 ===  金币:{coins}\n"]
+        lines = [f"使用道具  金币:{coins}\n"]
         for idx, name, count, item in available:
             lines.append(f"{idx}. {name}  x{count}  {item['desc']}")
         lines.append("\n输入编号使用 | 0 返回")
         await self._send_reply(event, "\n".join(lines))
 
-        choice = await self._wait(event)
-        if not choice:
-            return
-        if choice == "0":
+        choice = await self._wait_choice(
+            event, expect="int", min_val=0, max_val=len(available)
+        )
+        if choice is None or choice == 0:
             return
 
-        try:
-            selected_idx = int(choice)
-        except ValueError:
-            await self._send_reply(event, "请输入数字编号")
-            return
+        selected_idx = choice
 
         for idx, name, count, item in available:
             if idx == selected_idx:
@@ -861,18 +1297,10 @@ class Main(BaseModule):
                     await self._send_reply(
                         event, f"使用几个【{name}】? (1-{count})，输入数量:"
                     )
-                    qty_input = await self._wait(event)
-                    if not qty_input:
-                        return
-
-                    try:
-                        qty = int(qty_input)
-                    except ValueError:
-                        await self._send_reply(event, "请输入有效数字")
-                        return
-
-                    if qty < 1 or qty > count:
-                        await self._send_reply(event, f"数量需在 1-{count} 之间")
+                    qty = await self._wait_choice(
+                        event, expect="int", min_val=1, max_val=count
+                    )
+                    if qty is None:
                         return
 
                     effect = item["effect"]
@@ -911,6 +1339,7 @@ class Main(BaseModule):
                         event,
                         f"使用了【{name}】x{qty}! {', '.join(parts)}\n{status_line}",
                         image_url=url,
+                        card_type="success",
                     )
 
                 elif item["type"] == "buff":
@@ -924,10 +1353,11 @@ class Main(BaseModule):
                         event,
                         f"使用了【{name}】! 增益已激活。",
                         image_url=url,
+                        card_type="success",
                     )
                 return
 
-        await self._send_reply(event, "无效编号")
+        await self._send_reply(event, "无效编号", card_type="danger")
 
     async def _handle_titles(self, event, user_id):
         titles = self._get_titles(user_id)
@@ -937,7 +1367,7 @@ class Main(BaseModule):
             await self._send_reply(event, "你还没有获得任何头衔~")
             return
 
-        lines = ["=== 我的头衔 ===\n"]
+        lines = ["我的头衔\n"]
         for i, title in enumerate(titles, 1):
             marker = " <<" if title == active else ""
             lines.append(f"{i}. {title}{marker}")
@@ -945,32 +1375,30 @@ class Main(BaseModule):
         lines.append("\n输入编号佩戴 | 0. 取消佩戴 | 其他返回")
         await self._send_reply(event, "\n".join(lines))
 
-        choice = await self._wait(event)
-        if not choice:
+        choice = await self._wait_choice(
+            event, expect="int", min_val=0, max_val=len(titles)
+        )
+        if choice is None:
             return
 
-        if choice == "0":
+        if choice == 0:
             self._set_active_title(user_id, "")
             await self._send_reply(event, "已取消佩戴头衔")
             return
 
-        try:
-            idx = int(choice)
-            if 1 <= idx <= len(titles):
-                self._set_active_title(user_id, titles[idx - 1])
-                await self._send_reply(event, f"已佩戴头衔【{titles[idx - 1]}】!")
-            else:
-                await self._send_reply(event, "无效编号")
-        except ValueError:
-            pass
+        if 1 <= choice <= len(titles):
+            self._set_active_title(user_id, titles[choice - 1])
+            await self._send_reply(event, f"已佩戴头衔【{titles[choice - 1]}】!")
+        else:
+            await self._send_reply(event, "无效编号", card_type="danger")
 
-    # ================================================================
+    # =============================================================
     #  动作处理
-    # ================================================================
+    # =============================================================
 
     async def _handle_adopt(self, event):
         await self._send_reply(event, "请给小猫猫取个名字（限20字内）：")
-        name = await self._wait(event, timeout=120)
+        name = await self._wait_choice(event, timeout=120)
         if not name:
             return
 
@@ -1009,12 +1437,14 @@ class Main(BaseModule):
                 event,
                 f"你领养了新的小猫猫 [{name}]~\n好好对待它，不要再离开了!",
                 image_url=url,
+                card_type="success",
             )
         else:
             await self._send_reply(
                 event,
                 f"领养成功! 小猫猫 [{name}] 来到了你身边~\n以小猫视角细心养护它，记得每天喂食哦!",
                 image_url=url,
+                card_type="success",
             )
 
     async def _handle_rescue(self, event, user_id):
@@ -1033,6 +1463,7 @@ class Main(BaseModule):
                     event,
                     f"急救需要 {RESCUE_COST} 金币，你只有 {coins} 枚\n"
                     f"去商城购买急救包或打工赚钱吧!",
+                    card_type="danger",
                 )
                 return
 
@@ -1060,7 +1491,7 @@ class Main(BaseModule):
                 f"[{cat_data['name']}] 终于脱离了危险!\n"
                 f"饱食度恢复到 30，好好照顾它吧~"
             )
-            await self._send_reply(event, msg, image_url=url)
+            await self._send_reply(event, msg, image_url=url, card_type="success")
         else:
             cat_data["status"] = "dead"
             cat_data["death_cause"] = "starve"
@@ -1079,12 +1510,12 @@ class Main(BaseModule):
                 f"获得头衔【{DEATH_TITLES['starve']}】\n"
                 f"使用 /猫猫 重新开始"
             )
-            await self._send_reply(event, msg, image_url=url)
+            await self._send_reply(event, msg, image_url=url, card_type="death")
 
     async def _handle_work(self, event, user_id):
         cat_data, status = self._apply_hunger_decay(user_id)
         if not cat_data:
-            await self._send_reply(event, "你还没有猫猫呢~")
+            await self._send_reply(event, "你还没有猫猫呢~", card_type="danger")
             return
         if status == "dead":
             await self._send_dead_message(event, cat_data)
@@ -1102,7 +1533,7 @@ class Main(BaseModule):
             return
 
         if cat_data["fullness"] < 5:
-            await self._send_reply(event, "猫猫太饿了，先喂食吧!")
+            await self._send_reply(event, "猫猫太饿了，先喂食吧!", card_type="danger")
             return
 
         attrs = self._get_attrs(user_id)
@@ -1124,7 +1555,7 @@ class Main(BaseModule):
             if show:
                 available_jobs.append(hj)
 
-        lines = [f"=== 打工 === 学历:{edu_name}\n"]
+        lines = [f"打工 学历:{edu_name}\n"]
         for i, job in enumerate(available_jobs, 1):
             tag = ""
             if job in HIDDEN_JOBS:
@@ -1135,18 +1566,13 @@ class Main(BaseModule):
         lines.append("\n输入编号打工 | 0 返回")
         await self._send_reply(event, "\n".join(lines))
 
-        choice = await self._wait(event)
-        if not choice or choice == "0":
+        choice = await self._wait_choice(
+            event, expect="int", min_val=0, max_val=len(available_jobs)
+        )
+        if choice is None or choice == 0:
             return
 
-        try:
-            job_idx = int(choice) - 1
-            if job_idx < 0 or job_idx >= len(available_jobs):
-                await self._send_reply(event, "无效编号")
-                return
-        except ValueError:
-            await self._send_reply(event, "请输入数字编号")
-            return
+        job_idx = choice - 1
 
         job = available_jobs[job_idx]
         earnings = random.randint(job["earn_min"], job["earn_max"])
@@ -1191,7 +1617,7 @@ class Main(BaseModule):
                 f"它带着赚到的 {earnings} 金币，永远地去了喵星。\n"
                 f"获得头衔【{DEATH_TITLES['overwork']}】"
             )
-            await self._send_reply(event, msg, image_url=url)
+            await self._send_reply(event, msg, image_url=url, card_type="death")
             return
 
         self.sdk.storage.set(f"nekocare:{user_id}", cat_data)
@@ -1206,12 +1632,14 @@ class Main(BaseModule):
             f"{job['name']}完成! +{earnings} 金币!",
             f"辛苦{job['name']}! {earnings} 金币入袋!",
         ]
-        await self._send_reply(event, random.choice(msgs), image_url=url)
+        await self._send_reply(
+            event, random.choice(msgs), image_url=url, card_type="success"
+        )
 
     async def _handle_catch(self, event, user_id):
         cat_data, status = self._apply_hunger_decay(user_id)
         if not cat_data:
-            await self._send_reply(event, "你还没有猫猫呢~")
+            await self._send_reply(event, "你还没有猫猫呢~", card_type="danger")
             return
         if status == "dead":
             await self._send_dead_message(event, cat_data)
@@ -1221,7 +1649,7 @@ class Main(BaseModule):
             return
 
         await self._send_reply(event, "请 @你想抓的猫猫的主人:")
-        args = await self._wait(event)
+        args = await self._wait_choice(event)
         if not args:
             return
 
@@ -1248,7 +1676,7 @@ class Main(BaseModule):
             return
 
         if cat_data["fullness"] < 5:
-            await self._send_reply(event, "你的猫猫太饿了，先喂食!")
+            await self._send_reply(event, "你的猫猫太饿了，先喂食!", card_type="danger")
             return
 
         catch_rate = max(20, 60 - target_cat["intimacy"] * 0.4)
@@ -1296,7 +1724,7 @@ class Main(BaseModule):
                     f"但 [{cat_data['name']}] 因体力不支倒下了...\n"
                     f"获得头衔【{DEATH_TITLES['overwork']}】"
                 )
-                await self._send_reply(event, msg, image_url=url)
+                await self._send_reply(event, msg, image_url=url, card_type="death")
                 return
 
             url = await self._fetch_image("neko")
@@ -1304,7 +1732,9 @@ class Main(BaseModule):
                 f"成功抓到 [{target_cat['name']}] 打工! +{earnings} 金币!",
                 f"[{target_cat['name']}] 被抓去打工啦! 收获 {earnings} 金币!",
             ]
-            await self._send_reply(event, random.choice(msgs), image_url=url)
+            await self._send_reply(
+                event, random.choice(msgs), image_url=url, card_type="success"
+            )
         else:
             my_loss = random.randint(5, 10)
             cat_data["fullness"] = max(0, cat_data["fullness"] - my_loss)
@@ -1326,7 +1756,7 @@ class Main(BaseModule):
                     f"[{cat_data['name']}] 追逐时累倒了...\n"
                     f"获得头衔【{DEATH_TITLES['overwork']}】"
                 )
-                await self._send_reply(event, msg, image_url=url)
+                await self._send_reply(event, msg, image_url=url, card_type="death")
                 return
 
             self.sdk.storage.set(f"nekocare:{user_id}", cat_data)
@@ -1337,12 +1767,14 @@ class Main(BaseModule):
                 f"[{target_cat['name']}] 挣脱跑掉了! 还累了 {my_loss} 饱食度~",
                 f"抓捕失败! [{target_cat['name']}] 太机灵了!",
             ]
-            await self._send_reply(event, random.choice(msgs), image_url=url)
+            await self._send_reply(
+                event, random.choice(msgs), image_url=url, card_type="danger"
+            )
 
     async def _handle_rob(self, event, user_id):
         cat_data, status = self._apply_hunger_decay(user_id)
         if not cat_data:
-            await self._send_reply(event, "你还没有猫猫呢~")
+            await self._send_reply(event, "你还没有猫猫呢~", card_type="danger")
             return
         if status != "alive":
             await self._send_reply(event, "猫猫状态不对，无法打劫~")
@@ -1355,22 +1787,20 @@ class Main(BaseModule):
 
         await self._send_reply(
             event,
-            "=== 打劫 ===\n\n"
+            "打劫\n\n"
             "1. 打劫野外猫猫 (低风险低回报)\n"
             "2. 打劫其他玩家 (高风险高回报)\n"
             "0. 返回",
         )
 
-        mode = await self._wait(event)
-        if not mode or mode == "0":
+        mode = await self._wait_choice(event, choices=["0", "1", "2"])
+        if mode is None or mode == "0":
             return
 
         if mode == "1":
             await self._do_rob_npc(event, user_id, cat_data, attrs)
         elif mode == "2":
             await self._do_rob_player(event, user_id, cat_data, attrs)
-        else:
-            await self._send_reply(event, "无效选项")
 
     async def _do_rob_npc(self, event, user_id, cat_data, attrs):
         now = time.time()
@@ -1408,6 +1838,7 @@ class Main(BaseModule):
                 f"罚款 {actual_fine} 金币，声望-5\n"
                 f"(学历越高罚款越重哦~)",
                 image_url=url,
+                card_type="danger",
             )
             return
 
@@ -1422,7 +1853,9 @@ class Main(BaseModule):
                 f"成功打劫了[{target}]! 抢到 {loot} 金币!",
                 f"从[{target}]身上摸到了 {loot} 金币!",
             ]
-            await self._send_reply(event, random.choice(msgs), image_url=url)
+            await self._send_reply(
+                event, random.choice(msgs), image_url=url, card_type="success"
+            )
         else:
             penalty = random.randint(5, 15)
             actual_penalty = min(penalty, self._get_coins(user_id))
@@ -1434,7 +1867,9 @@ class Main(BaseModule):
                 f"[{target}] 太机灵了! 打劫失败，倒赔 {actual_penalty} 金币~",
                 f"被[{target}]揍了一顿! 损失 {actual_penalty} 金币!",
             ]
-            await self._send_reply(event, random.choice(msgs), image_url=url)
+            await self._send_reply(
+                event, random.choice(msgs), image_url=url, card_type="danger"
+            )
 
     async def _do_rob_player(self, event, user_id, cat_data, attrs):
         now = time.time()
@@ -1446,7 +1881,7 @@ class Main(BaseModule):
             return
 
         await self._send_reply(event, "请 @你想打劫的目标:")
-        args = await self._wait(event)
+        args = await self._wait_choice(event)
         if not args:
             return
 
@@ -1486,6 +1921,7 @@ class Main(BaseModule):
                 f"打劫[{target_name}]时被猫警巡逻队抓住了!\n"
                 f"罚款 {actual_fine} 金币，声望-10",
                 image_url=url,
+                card_type="danger",
             )
             return
 
@@ -1512,7 +1948,7 @@ class Main(BaseModule):
                     f"但 [{cat_data['name']}] 在逃跑途中累倒了...\n"
                     f"获得头衔【{DEATH_TITLES['overwork']}】"
                 )
-                await self._send_reply(event, msg, image_url=url)
+                await self._send_reply(event, msg, image_url=url, card_type="death")
                 return
 
             self.sdk.storage.set(f"nekocare:{user_id}", cat_data)
@@ -1521,7 +1957,9 @@ class Main(BaseModule):
                 f"打劫成功! 抢了 {stolen} 金币! (声望下降...)",
                 f"[{cat_data['name']}] 成功打劫! +{stolen} 金币!",
             ]
-            await self._send_reply(event, random.choice(msgs), image_url=url)
+            await self._send_reply(
+                event, random.choice(msgs), image_url=url, card_type="success"
+            )
         else:
             penalty = random.randint(10, 30)
             actual_penalty = min(penalty, self._get_coins(user_id))
@@ -1534,12 +1972,14 @@ class Main(BaseModule):
                 f"打劫失败! 被[{target_name}] 发现了，赔偿 {actual_penalty} 金币!",
                 f"[{cat_data['name']}] 打劫扑空了，倒赔 {actual_penalty} 金币!",
             ]
-            await self._send_reply(event, random.choice(msgs), image_url=url)
+            await self._send_reply(
+                event, random.choice(msgs), image_url=url, card_type="danger"
+            )
 
     async def _handle_study(self, event, user_id):
         cat_data, status = self._apply_hunger_decay(user_id)
         if not cat_data:
-            await self._send_reply(event, "你还没有猫猫呢~")
+            await self._send_reply(event, "你还没有猫猫呢~", card_type="danger")
             return
         if status != "alive":
             await self._send_reply(event, "猫猫状态不对，无法学习~")
@@ -1562,7 +2002,7 @@ class Main(BaseModule):
         bar = "█" * filled + "░" * (bar_len - filled)
 
         menu = (
-            f"=== 学习深造 ===\n\n"
+            f"学习深造\n\n"
             f"当前学历: {edu_name}\n"
             f"目标: {next_info['name']} (学费:{next_info['cost']}金币)\n"
             f"学习进度: [{bar}] {progress}%\n"
@@ -1574,8 +2014,8 @@ class Main(BaseModule):
         )
         await self._send_reply(event, menu)
 
-        choice = await self._wait(event)
-        if not choice or choice == "0":
+        choice = await self._wait_choice(event, choices=["0", "1", "2", "3"])
+        if choice is None or choice == "0":
             return
 
         now = time.time()
@@ -1604,6 +2044,7 @@ class Main(BaseModule):
                     f"恭喜! [{cat_data['name']}] 获得{next_info['name']}学历!\n"
                     f"解锁了新的工作机会!",
                     image_url=url,
+                    card_type="success",
                 )
             else:
                 cost_note = ""
@@ -1614,6 +2055,7 @@ class Main(BaseModule):
                     event,
                     f"认真学习了! 进度 [{bar}] {progress}% 智力+{random.randint(1, 3)}{cost_note}",
                     image_url=url,
+                    card_type="success",
                 )
         elif choice == "2":
             progress = min(100, progress + 15)
@@ -1631,13 +2073,16 @@ class Main(BaseModule):
                     f"正常学习完成! 进度 [{bar}] {progress}%\n"
                     f"恭喜! [{cat_data['name']}] 获得{next_info['name']}学历!",
                     image_url=url,
+                    card_type="success",
                 )
             else:
                 cost_note = ""
                 if progress >= 100:
                     cost_note = f"\n(学费不足，还需要 {next_info['cost']} 金币才能毕业)"
                 await self._send_reply(
-                    event, f"正常学习完成! 进度 [{bar}] {progress}%{cost_note}"
+                    event,
+                    f"正常学习完成! 进度 [{bar}] {progress}%{cost_note}",
+                    card_type="success",
                 )
         elif choice == "3":
             progress = min(100, progress + 5)
@@ -1657,6 +2102,7 @@ class Main(BaseModule):
                     f"摸鱼了一节课... 进度 [{bar}] {progress}%\n"
                     f"居然也毕业了! 获得{next_info['name']}学历!",
                     image_url=url,
+                    card_type="success",
                 )
             else:
                 url = await self._fetch_image("sleep")
@@ -1664,11 +2110,13 @@ class Main(BaseModule):
                     f"摸鱼了一节课... 进度 [{bar}] {progress}% 魅力+1",
                     f"上课偷偷睡觉，被老师发现了! 进度 [{bar}] {progress}%",
                 ]
-                await self._send_reply(event, random.choice(msgs), image_url=url)
+                await self._send_reply(
+                    event, random.choice(msgs), image_url=url, card_type="success"
+                )
 
     async def _handle_bank(self, event, user_id):
         while True:
-            if self._timed_out:
+            if user_id in self._timed_out_users:
                 return
 
             bank = self._calc_bank_interest(user_id)
@@ -1696,7 +2144,7 @@ class Main(BaseModule):
                 fd_info = f"\n定期存款: {fd['amount']} 金币 (含利息{fd['interest']}) 剩余{h}时{m}分"
 
             menu = (
-                f"=== 喵喵银行 ===\n\n"
+                f"喵喵银行\n\n"
                 f"活期存款: {bank['deposit']} 金币\n"
                 f"钱包: {coins} 金币\n"
                 f"贷款: {loan['amount']} 金币 (利率{loan_rate:.1f}%/24h)\n"
@@ -1712,13 +2160,21 @@ class Main(BaseModule):
             )
             await self._send_reply(event, menu)
 
-            choice = await self._wait(event)
-            if not choice:
-                return
-            if choice == "0":
+            choice = await self._wait_choice(
+                event, choices=["0", "1", "2", "3", "4", "5", "6"]
+            )
+            if choice is None or choice == "0":
                 return
             elif choice == "1":
-                await self._handle_deposit(event, user_id)
+                await self._send_reply(
+                    event,
+                    "1. 存款  2. 取款  0. 返回",
+                )
+                sub = await self._wait_choice(event, choices=["0", "1", "2"])
+                if sub == "1":
+                    await self._handle_deposit(event, user_id)
+                elif sub == "2":
+                    await self._handle_withdraw(event, user_id)
             elif choice == "2":
                 await self._handle_fixed_deposit(event, user_id)
             elif choice == "3":
@@ -1726,7 +2182,7 @@ class Main(BaseModule):
                     event,
                     "1. 贷款  2. 还款  0. 返回",
                 )
-                sub = await self._wait(event)
+                sub = await self._wait_choice(event, choices=["0", "1", "2"])
                 if sub == "1":
                     await self._handle_loan_borrow(event, user_id)
                 elif sub == "2":
@@ -1737,8 +2193,6 @@ class Main(BaseModule):
                 await self._handle_stocks(event, user_id)
             elif choice == "6":
                 await self._handle_invest(event, user_id)
-            else:
-                await self._send_reply(event, "无效选项")
 
     async def _handle_deposit(self, event, user_id):
         coins = self._get_coins(user_id)
@@ -1749,18 +2203,8 @@ class Main(BaseModule):
             f"当前存款: {bank['deposit']} | 钱包: {coins} 金币\n最高存款: {BANK_MAX_DEPOSIT}\n请输入存款金额:",
         )
 
-        amount_str = await self._wait(event)
-        if not amount_str:
-            return
-
-        try:
-            amount = int(amount_str)
-        except ValueError:
-            await self._send_reply(event, "请输入有效数字")
-            return
-
-        if amount <= 0:
-            await self._send_reply(event, "金额需大于0")
+        amount = await self._wait_choice(event, expect="int", min_val=1)
+        if amount is None:
             return
 
         coins = self._get_coins(user_id)
@@ -1783,7 +2227,10 @@ class Main(BaseModule):
 
         url = await self._fetch_image("happy")
         await self._send_reply(
-            event, f"成功存入 {amount} 金币! 当前存款: {bank['deposit']}", image_url=url
+            event,
+            f"成功存入 {amount} 金币! 当前存款: {bank['deposit']}",
+            image_url=url,
+            card_type="success",
         )
 
     async def _handle_withdraw(self, event, user_id):
@@ -1795,18 +2242,8 @@ class Main(BaseModule):
             f"当前存款: {bank['deposit']} | 钱包: {coins} 金币\n请输入取款金额:",
         )
 
-        amount_str = await self._wait(event)
-        if not amount_str:
-            return
-
-        try:
-            amount = int(amount_str)
-        except ValueError:
-            await self._send_reply(event, "请输入有效数字")
-            return
-
-        if amount <= 0:
-            await self._send_reply(event, "金额需大于0")
+        amount = await self._wait_choice(event, expect="int", min_val=1)
+        if amount is None:
             return
 
         bank = self._get_bank(user_id)
@@ -1822,7 +2259,10 @@ class Main(BaseModule):
 
         url = await self._fetch_image("happy")
         await self._send_reply(
-            event, f"成功取出 {amount} 金币! 当前存款: {bank['deposit']}", image_url=url
+            event,
+            f"成功取出 {amount} 金币! 当前存款: {bank['deposit']}",
+            image_url=url,
+            card_type="success",
         )
 
     async def _handle_fixed_deposit(self, event, user_id):
@@ -1840,6 +2280,7 @@ class Main(BaseModule):
                     event,
                     f"定期存款到期! 本金 {fd_calc['amount']} + 利息 {fd_calc['interest']} = {total} 金币已到账!",
                     image_url=url,
+                    card_type="success",
                 )
             else:
                 h = int((BANK_FIXED_TERM - elapsed) // 3600)
@@ -1852,7 +2293,7 @@ class Main(BaseModule):
                     f"1. 提前取出\n"
                     f"0. 返回",
                 )
-                choice = await self._wait(event)
+                choice = await self._wait_choice(event, choices=["0", "1"])
                 if choice == "1":
                     fd_calc = self._calc_fixed_interest(user_id)
                     recv = fd_calc["amount"] - penalty
@@ -1868,34 +2309,30 @@ class Main(BaseModule):
         coins = self._get_coins(user_id)
         await self._send_reply(
             event,
-            f"=== 定期存款 ===\n\n"
+            f"定期存款\n\n"
             f"钱包: {coins} 金币\n"
             f"定期利率: {BANK_INTEREST_FIXED * 100}% / 24小时\n"
             f"期限: 24小时 | 提前取出违约金 {int(BANK_FIXED_PENALTY * 100)}%\n\n"
             f"请输入存入金额 (0 返回):",
         )
 
-        amount_str = await self._wait(event)
-        if not amount_str:
-            return
-        try:
-            amount = int(amount_str)
-        except ValueError:
-            await self._send_reply(event, "请输入有效数字")
-            return
-        if amount <= 0:
+        amount = await self._wait_choice(event, expect="int", min_val=0)
+        if amount is None or amount <= 0:
             return
 
         coins = self._get_coins(user_id)
         if amount > coins:
-            await self._send_reply(event, f"金币不足! 只有 {coins}")
+            await self._send_reply(event, f"金币不足! 只有 {coins}", card_type="danger")
             return
 
         self._add_coins(user_id, -amount)
         self._set_fixed_deposit(user_id, {"amount": amount, "start_time": time.time()})
         url = await self._fetch_image("happy")
         await self._send_reply(
-            event, f"存入定期 {amount} 金币! 24小时后到期~", image_url=url
+            event,
+            f"存入定期 {amount} 金币! 24小时后到期~",
+            image_url=url,
+            card_type="success",
         )
 
     async def _handle_loan_borrow(self, event, user_id):
@@ -1918,32 +2355,30 @@ class Main(BaseModule):
 
         await self._send_reply(
             event,
-            f"=== 贷款 ===\n\n"
+            f"贷款\n\n"
             f"最大可借: {max_loan} 金币\n"
             f"利率: {loan_rate:.1f}% / 24小时 (声望越高利率越低)\n"
             f"你的声望: {attrs['rep']}\n\n"
             f"请输入借款金额 (0 返回):",
         )
 
-        amount_str = await self._wait(event)
-        if not amount_str:
-            return
-        try:
-            amount = int(amount_str)
-        except ValueError:
-            await self._send_reply(event, "请输入有效数字")
-            return
-        if amount <= 0:
-            return
-        if amount > max_loan:
-            await self._send_reply(event, f"超出额度! 最多借 {max_loan}")
+        amount = await self._wait_choice(
+            event, expect="int", min_val=0, max_val=max_loan
+        )
+        if amount is None or amount <= 0:
             return
 
-        self._set_loan(user_id, {"amount": amount, "last_interest": time.time()})
+        self._set_loan(
+            user_id,
+            {"amount": amount, "principal": amount, "last_interest": time.time()},
+        )
         self._add_coins(user_id, amount)
         url = await self._fetch_image("happy")
         await self._send_reply(
-            event, f"成功贷款 {amount} 金币! 记得按时还款~", image_url=url
+            event,
+            f"成功贷款 {amount} 金币! 记得按时还款~",
+            image_url=url,
+            card_type="success",
         )
 
     async def _handle_loan_repay(self, event, user_id):
@@ -1955,7 +2390,7 @@ class Main(BaseModule):
         coins = self._get_coins(user_id)
         await self._send_reply(
             event,
-            f"=== 还款 ===\n\n"
+            f"还款\n\n"
             f"贷款余额: {loan['amount']} 金币\n"
             f"你的金币: {coins}\n\n"
             f"1. 全部还清\n"
@@ -1963,49 +2398,62 @@ class Main(BaseModule):
             f"0. 返回",
         )
 
-        choice = await self._wait(event)
-        if not choice or choice == "0":
+        choice = await self._wait_choice(event, choices=["0", "1", "2"])
+        if choice is None or choice == "0":
             return
 
         if choice == "1":
             repay = min(loan["amount"], coins)
             self._add_coins(user_id, -repay)
+            new_amount = loan["amount"] - repay
+            principal = loan.get("principal", new_amount)
+            if new_amount <= 0:
+                principal = 0
             self._set_loan(
                 user_id,
-                {"amount": loan["amount"] - repay, "last_interest": time.time()},
+                {
+                    "amount": new_amount,
+                    "principal": principal,
+                    "last_interest": time.time(),
+                },
             )
             self._mod_attr(user_id, "rep", 3)
-            await self._send_reply(event, f"成功还款 {repay} 金币! 声望+3")
+            await self._send_reply(
+                event, f"成功还款 {repay} 金币! 声望+3", card_type="success"
+            )
         elif choice == "2":
             await self._send_reply(event, "请输入还款金额:")
-            amount_str = await self._wait(event)
-            if not amount_str:
-                return
-            try:
-                amount = int(amount_str)
-            except ValueError:
-                await self._send_reply(event, "请输入有效数字")
-                return
-            if amount <= 0:
+            amount = await self._wait_choice(event, expect="int", min_val=1)
+            if amount is None:
                 return
             amount = min(amount, loan["amount"], coins)
             self._add_coins(user_id, -amount)
+            new_amount = loan["amount"] - amount
+            principal = loan.get("principal", new_amount)
+            if new_amount <= 0:
+                principal = 0
             self._set_loan(
                 user_id,
-                {"amount": loan["amount"] - amount, "last_interest": time.time()},
+                {
+                    "amount": new_amount,
+                    "principal": principal,
+                    "last_interest": time.time(),
+                },
             )
             await self._send_reply(
-                event, f"成功还款 {amount} 金币! 剩余 {loan['amount'] - amount}"
+                event,
+                f"成功还款 {amount} 金币! 剩余 {new_amount}",
+                card_type="success",
             )
 
     async def _handle_transfer(self, event, user_id):
         coins = self._get_coins(user_id)
         await self._send_reply(
             event,
-            f"=== 转账 ===\n\n你的金币: {coins}\n请输入转账目标 (@对方):",
+            f"转账\n\n你的金币: {coins}\n请输入转账目标 (@对方):",
         )
 
-        target_str = await self._wait(event)
+        target_str = await self._wait_choice(event)
         if not target_str:
             return
         target_id = target_str.strip()
@@ -2014,37 +2462,32 @@ class Main(BaseModule):
             return
 
         await self._send_reply(event, "请输入转账金额:")
-        amount_str = await self._wait(event)
-        if not amount_str:
-            return
-        try:
-            amount = int(amount_str)
-        except ValueError:
-            await self._send_reply(event, "请输入有效数字")
-            return
-        if amount <= 0:
+        amount = await self._wait_choice(event, expect="int", min_val=1)
+        if amount is None:
             return
 
         coins = self._get_coins(user_id)
         if amount > coins:
-            await self._send_reply(event, f"金币不足! 只有 {coins}")
+            await self._send_reply(event, f"金币不足! 只有 {coins}", card_type="danger")
             return
 
         self._add_coins(user_id, -amount)
         self._add_coins(target_id, amount)
         self._mod_attr(user_id, "rep", 2)
-        await self._send_reply(event, f"成功转账 {amount} 金币! 声望+2")
+        await self._send_reply(
+            event, f"成功转账 {amount} 金币! 声望+2", card_type="success"
+        )
 
     async def _handle_stocks(self, event, user_id):
         while True:
-            if self._timed_out:
+            if user_id in self._timed_out_users:
                 return
 
             prices = self._update_stock_prices()
             user_stocks = self._get_user_stocks(user_id)
             coins = self._get_coins(user_id)
 
-            lines = [f"=== 股票市场 ===  钱包:{coins}金币\n"]
+            lines = [f"股票市场  钱包:{coins}金币\n"]
             for i, name in enumerate(STOCK_LIST, 1):
                 held = user_stocks.get(name, 0)
                 price = prices[name]
@@ -2054,17 +2497,13 @@ class Main(BaseModule):
             lines.append("\n1.买入  2.卖出  0.返回")
             await self._send_reply(event, "\n".join(lines))
 
-            choice = await self._wait(event)
-            if not choice:
+            choice = await self._wait_choice(event, choices=["0", "1", "2"])
+            if choice is None or choice == "0":
                 return
-            if choice == "0":
-                return
-            elif choice == "1":
+            if choice == "1":
                 await self._handle_buy_stock(event, user_id, prices)
             elif choice == "2":
                 await self._handle_sell_stock(event, user_id, prices)
-            else:
-                await self._send_reply(event, "无效选项")
 
     async def _handle_buy_stock(self, event, user_id, prices):
         coins = self._get_coins(user_id)
@@ -2074,42 +2513,28 @@ class Main(BaseModule):
         lines.append("0. 返回")
         await self._send_reply(event, "\n".join(lines))
 
-        idx_str = await self._wait(event)
-        if not idx_str or idx_str == "0":
+        idx = await self._wait_choice(
+            event, expect="int", min_val=0, max_val=len(STOCK_LIST)
+        )
+        if idx is None or idx == 0:
             return
-
-        try:
-            idx = int(idx_str) - 1
-            if idx < 0 or idx >= len(STOCK_LIST):
-                await self._send_reply(event, "无效编号")
-                return
-        except ValueError:
-            await self._send_reply(event, "请输入数字")
-            return
+        idx -= 1
 
         stock_name = STOCK_LIST[idx]
         price = prices[stock_name]
         await self._send_reply(event, f"{stock_name} 当前价: ¥{price}\n请输入购买数量:")
 
-        qty_str = await self._wait(event)
-        if not qty_str:
-            return
-
-        try:
-            qty = int(qty_str)
-        except ValueError:
-            await self._send_reply(event, "请输入有效数字")
-            return
-
-        if qty <= 0:
-            await self._send_reply(event, "数量需大于0")
+        qty = await self._wait_choice(event, expect="int", min_val=1)
+        if qty is None:
             return
 
         total_cost = price * qty
         coins = self._get_coins(user_id)
         if total_cost > coins:
             await self._send_reply(
-                event, f"金币不足! 需要 {total_cost}，你只有 {coins}"
+                event,
+                f"金币不足! 需要 {total_cost}，你只有 {coins}",
+                card_type="danger",
             )
             return
 
@@ -2139,18 +2564,12 @@ class Main(BaseModule):
         lines.append("0. 返回")
         await self._send_reply(event, "\n".join(lines))
 
-        idx_str = await self._wait(event)
-        if not idx_str or idx_str == "0":
+        idx = await self._wait_choice(
+            event, expect="int", min_val=0, max_val=len(STOCK_LIST)
+        )
+        if idx is None or idx == 0:
             return
-
-        try:
-            idx = int(idx_str) - 1
-            if idx < 0 or idx >= len(STOCK_LIST):
-                await self._send_reply(event, "无效编号")
-                return
-        except ValueError:
-            await self._send_reply(event, "请输入数字")
-            return
+        idx -= 1
 
         stock_name = STOCK_LIST[idx]
         user_stocks = self._get_user_stocks(user_id)
@@ -2164,18 +2583,8 @@ class Main(BaseModule):
             event, f"{stock_name} 当前价: ¥{price}  持有: {held}股\n请输入卖出数量:"
         )
 
-        qty_str = await self._wait(event)
-        if not qty_str:
-            return
-
-        try:
-            qty = int(qty_str)
-        except ValueError:
-            await self._send_reply(event, "请输入有效数字")
-            return
-
-        if qty <= 0 or qty > held:
-            await self._send_reply(event, f"数量需在 1-{held} 之间")
+        qty = await self._wait_choice(event, expect="int", min_val=1, max_val=held)
+        if qty is None:
             return
 
         revenue = price * qty
@@ -2198,7 +2607,7 @@ class Main(BaseModule):
     async def _handle_invest(self, event, user_id):
         coins = self._get_coins(user_id)
 
-        lines = ["=== 理财投资 ===\n"]
+        lines = ["理财投资\n"]
         for i, inv in enumerate(INVESTMENTS, 1):
             lines.append(
                 f"{i}. {inv['name']}  投入:{inv['cost']}金币  "
@@ -2209,25 +2618,22 @@ class Main(BaseModule):
         lines.append("\n输入编号投资 | 0 返回")
         await self._send_reply(event, "\n".join(lines))
 
-        choice = await self._wait(event)
-        if not choice or choice == "0":
+        choice = await self._wait_choice(
+            event, expect="int", min_val=0, max_val=len(INVESTMENTS)
+        )
+        if choice is None or choice == 0:
             return
 
-        try:
-            idx = int(choice) - 1
-            if idx < 0 or idx >= len(INVESTMENTS):
-                await self._send_reply(event, "无效编号")
-                return
-        except ValueError:
-            await self._send_reply(event, "请输入数字")
-            return
+        idx = choice - 1
 
         inv = INVESTMENTS[idx]
         coins = self._get_coins(user_id)
 
         if coins < inv["cost"]:
             await self._send_reply(
-                event, f"金币不足! 需要 {inv['cost']}，你只有 {coins}"
+                event,
+                f"金币不足! 需要 {inv['cost']}，你只有 {coins}",
+                card_type="danger",
             )
             return
 
@@ -2239,6 +2645,7 @@ class Main(BaseModule):
                 event,
                 f"{inv['name']}失败... 投入的 {inv['cost']} 金币打了水漂!",
                 image_url=url,
+                card_type="danger",
             )
         else:
             profit = random.randint(inv["profit_min"], inv["profit_max"])
@@ -2248,6 +2655,7 @@ class Main(BaseModule):
                 event,
                 f"{inv['name']}成功! 投入 {inv['cost']}，回报 {inv['cost'] + profit} 金币! (净赚 {profit})",
                 image_url=url,
+                card_type="success",
             )
 
     async def _handle_foster(self, event, user_id, cat_data):
@@ -2261,10 +2669,8 @@ class Main(BaseModule):
         )
         await self._send_reply(event, menu)
 
-        choice = await self._wait(event)
-        if not choice:
-            return
-        if choice != "1":
+        choice = await self._wait_choice(event, choices=["0", "1"])
+        if choice is None or choice != "1":
             await self._send_reply(event, "已取消寄养")
             return
 
@@ -2281,6 +2687,7 @@ class Main(BaseModule):
             f"它会好好吃饭的，放心吧!\n"
             f"随时可以用菜单接它回家。",
             image_url=url,
+            card_type="success",
         )
 
     async def _handle_unfoster(self, event, user_id, cat_data):
@@ -2298,16 +2705,16 @@ class Main(BaseModule):
         )
         await self._send_reply(event, menu)
 
-        choice = await self._wait(event)
-        if not choice:
-            return
-        if choice != "1":
+        choice = await self._wait_choice(event, choices=["0", "1"])
+        if choice is None or choice != "1":
             await self._send_reply(event, "已取消")
             return
 
         if coins < cost:
             await self._send_reply(
-                event, f"金币不足! 需要 {cost} 枚，你只有 {coins} 枚"
+                event,
+                f"金币不足! 需要 {cost} 枚，你只有 {coins} 枚",
+                card_type="danger",
             )
             return
 
@@ -2325,6 +2732,7 @@ class Main(BaseModule):
             event,
             f"[{cat_data['name']}] 回家啦! 花了 {cost} 金币寄养费~",
             image_url=url,
+            card_type="success",
         )
 
     async def _handle_status(self, event, cat_data, user_id):
@@ -2385,7 +2793,7 @@ class Main(BaseModule):
         if active_buffs:
             lines.append(f"增益: {', '.join(active_buffs)}")
 
-        await self._send_reply(event, "\n".join(lines))
+        await self._send_reply(event, "\n".join(lines), card_type="status")
 
     async def _handle_abandon(self, event, user_id, cat_data) -> bool:
         menu = (
@@ -2394,10 +2802,10 @@ class Main(BaseModule):
             f"1. 确认弃养\n"
             f"0. 我再想想"
         )
-        await self._send_reply(event, menu)
+        await self._send_reply(event, menu, card_type="danger")
 
-        choice = await self._wait(event)
-        if not choice:
+        choice = await self._wait_choice(event, choices=["0", "1"])
+        if choice is None:
             return False
         if choice != "1":
             await self._send_reply(event, "好好珍惜你的猫猫吧~")
@@ -2419,7 +2827,7 @@ class Main(BaseModule):
 
     async def _handle_rename(self, event, user_id, cat_data):
         await self._send_reply(event, "请输入新名字（限20字内）：")
-        new_name = await self._wait(event, timeout=120)
+        new_name = await self._wait_choice(event, timeout=120)
         if not new_name:
             return
 
@@ -2462,7 +2870,9 @@ class Main(BaseModule):
             f"猫猫吃得超开心! 饱食度 {cat_data['fullness']}",
             f"第 {cat_data['feed_count']} 次喂食~猫猫蹭了蹭你的手",
         ]
-        await self._send_reply(event, random.choice(msgs), image_url=url)
+        await self._send_reply(
+            event, random.choice(msgs), image_url=url, card_type="success"
+        )
 
     async def _do_cuddle(self, event, user_id, cat_data):
         now = time.time()
@@ -2480,7 +2890,9 @@ class Main(BaseModule):
             f"和猫猫贴贴~亲密度+{ig}",
             "猫猫蹭了蹭你，好温暖~",
         ]
-        await self._send_reply(event, random.choice(msgs), image_url=url)
+        await self._send_reply(
+            event, random.choice(msgs), image_url=url, card_type="success"
+        )
 
     async def _do_pat(self, event, user_id, cat_data):
         now = time.time()
@@ -2494,7 +2906,9 @@ class Main(BaseModule):
         self.sdk.storage.set(f"nekocare:{user_id}", cat_data)
 
         url = await self._fetch_image("pat")
-        await self._send_reply(event, f"猫猫舒服地咕噜咕噜~亲密度+{ig}", image_url=url)
+        await self._send_reply(
+            event, f"猫猫舒服地咕噜咕噜~亲密度+{ig}", image_url=url, card_type="success"
+        )
 
     async def _do_buy(self, event, user_id, item_name):
         item = SHOP_ITEMS[item_name]
@@ -2504,6 +2918,7 @@ class Main(BaseModule):
             await self._send_reply(
                 event,
                 f"金币不足! 【{item_name}】{item['price']}金币，你只有 {coins} 枚",
+                card_type="danger",
             )
             return
 
@@ -2515,6 +2930,7 @@ class Main(BaseModule):
             event,
             f"购买了【{item_name}】! 已放入背包。\n用「使用道具」来使用它。",
             image_url=url,
+            card_type="success",
         )
 
     async def _show_buffs(self, event, user_id):
@@ -2525,16 +2941,16 @@ class Main(BaseModule):
             await self._send_reply(event, "当前没有活跃的增益效果")
             return
 
-        lines = ["=== 活跃增益 ===\n"]
+        lines = ["活跃增益\n"]
         for buff_name in active:
             label = self._get_buff_label(buff_name)
             if label:
                 lines.append(f"- {label}")
         await self._send_reply(event, "\n".join(lines))
 
-    # ================================================================
+    # =============================================================
     #  饥饿衰减 / 生命系统
-    # ================================================================
+    # =============================================================
 
     def _apply_hunger_decay(self, user_id: str) -> Tuple[Optional[Dict], Optional[str]]:
         cat_data = self._get_cat(user_id)
@@ -2609,7 +3025,10 @@ class Main(BaseModule):
         }
         url = await self._fetch_image("cry")
         await self._send_reply(
-            event, stories.get(cause, stories["starve"]), image_url=url
+            event,
+            stories.get(cause, stories["starve"]),
+            image_url=url,
+            card_type="death",
         )
 
     async def _send_critical_message(self, event, cat_data: dict):
@@ -2620,11 +3039,9 @@ class Main(BaseModule):
             f"请 {hours} 小时内使用急救!\n"
             f"急救费用: {RESCUE_COST} 金币 (50%成功率)"
         )
-        await self._send_reply(event, msg, image_url=url)
+        await self._send_reply(event, msg, image_url=url, card_type="danger")
 
-    # ================================================================
-    #  存储工具
-    # ================================================================
+    # =============================================================
 
     def _get_cat(self, user_id: str) -> Optional[Dict[str, Any]]:
         return self.sdk.storage.get(f"nekocare:{user_id}")
@@ -2657,6 +3074,20 @@ class Main(BaseModule):
 
     def _set_rob_cooldown(self, user_id: str):
         self.sdk.storage.set(f"nekocare_rob_cd:{user_id}", time.time())
+
+    def _get_scavenge_cooldown(self, user_id: str) -> float:
+        cd = self.sdk.storage.get(f"nekocare_scavenge_cd:{user_id}")
+        return cd if cd is not None else 0
+
+    def _set_scavenge_cooldown(self, user_id: str):
+        self.sdk.storage.set(f"nekocare_scavenge_cd:{user_id}", time.time())
+
+    def _get_signin_data(self, user_id: str) -> dict:
+        data = self.sdk.storage.get(f"nekocare_signin:{user_id}")
+        return data if data is not None else {}
+
+    def _set_signin_data(self, user_id: str, data: dict):
+        self.sdk.storage.set(f"nekocare_signin:{user_id}", data)
 
     def _get_edu(self, user_id: str) -> int:
         edu = self.sdk.storage.get(f"nekocare_edu:{user_id}")
@@ -2735,7 +3166,7 @@ class Main(BaseModule):
         self._set_attrs(user_id, {"int": 0, "hp": 50, "cha": 0, "rep": -30})
         self._set_bank(user_id, {"deposit": 0, "last_interest": time.time()})
         self._set_fixed_deposit(user_id, {"amount": 0, "start_time": 0.0})
-        self._set_loan(user_id, {"amount": 0, "last_interest": 0.0})
+        self._set_loan(user_id, {"amount": 0, "principal": 0, "last_interest": 0.0})
         self._set_user_stocks(user_id, {})
 
     def _penalize_death(self, user_id: str):
@@ -2754,7 +3185,7 @@ class Main(BaseModule):
         self._set_attrs(user_id, {"int": 0, "hp": 50, "cha": 0, "rep": -10})
         self._set_bank(user_id, {"deposit": 0, "last_interest": time.time()})
         self._set_fixed_deposit(user_id, {"amount": 0, "start_time": 0.0})
-        self._set_loan(user_id, {"amount": 0, "last_interest": 0.0})
+        self._set_loan(user_id, {"amount": 0, "principal": 0, "last_interest": 0.0})
         self._set_user_stocks(user_id, {})
 
     def _get_study_progress(self, user_id: str) -> int:
@@ -2768,7 +3199,11 @@ class Main(BaseModule):
 
     def _get_loan(self, user_id: str) -> dict:
         loan = self.sdk.storage.get(f"nekocare_loan:{user_id}")
-        return loan if loan is not None else {"amount": 0, "last_interest": 0.0}
+        return (
+            loan
+            if loan is not None
+            else {"amount": 0, "principal": 0, "last_interest": 0.0}
+        )
 
     def _set_loan(self, user_id: str, data: dict):
         self.sdk.storage.set(f"nekocare_loan:{user_id}", data)
@@ -2783,6 +3218,13 @@ class Main(BaseModule):
             interest = int(loan["amount"] * BANK_MAX_LOAN_RATE * (hours / 24))
             if interest > 0:
                 loan["amount"] += interest
+                principal = loan.get("principal", loan["amount"] - interest)
+                cap = max(
+                    int(principal * BANK_LOAN_CAP_RATIO),
+                    BANK_LOAN_CAP_ABSOLUTE,
+                )
+                if loan["amount"] > cap:
+                    loan["amount"] = cap
                 loan["last_interest"] = now
                 self._set_loan(user_id, loan)
         return loan
@@ -2810,7 +3252,7 @@ class Main(BaseModule):
     def _update_stock_prices(self) -> dict:
         prices = self._get_stock_prices()
         for name in STOCK_LIST:
-            change = random.uniform(-0.1, 0.1)
+            change = random.uniform(-0.07, 0.12)
             prices[name] = max(1, int(prices[name] * (1 + change)))
         self.sdk.storage.set("nekocare_stock_prices", prices)
         return prices
@@ -2906,9 +3348,9 @@ class Main(BaseModule):
             if days >= 30:
                 self._add_title(user_id, "好主人")
 
-    # ================================================================
+    # =============================================================
     #  显示工具
-    # ================================================================
+    # =============================================================
 
     def _str_width(self, s: str) -> int:
         w = 0
@@ -2947,7 +3389,7 @@ class Main(BaseModule):
         inv = self._get_inventory(user_id)
         name_w = max(self._str_width(n) for n in SHOP_ITEM_LIST) + 2
 
-        header = self._pad("=== 背包 ===", 22) + f"金币:{coins}"
+        header = self._pad("背包", 22) + f"金币:{coins}"
         lines = [header, ""]
 
         half = (len(SHOP_ITEM_LIST) + 1) // 2
@@ -2974,7 +3416,7 @@ class Main(BaseModule):
     def _build_shop_display(self, coins: int) -> str:
         name_w = max(self._str_width(n) for n in SHOP_ITEM_LIST) + 2
 
-        header = self._pad("=== 商城 ===", 22) + f"金币:{coins}"
+        header = self._pad("商城", 22) + f"金币:{coins}"
         lines = [header, ""]
 
         for i, name in enumerate(SHOP_ITEM_LIST):
@@ -2984,25 +3426,28 @@ class Main(BaseModule):
 
         return "\n".join(lines)
 
-    # ================================================================
+    # =============================================================
     #  富文本渲染
-    # ================================================================
+    # =============================================================
 
-    def _render_line_html(self, line: str, is_first: bool) -> str:
+    def _render_line_html(self, line: str, is_first: bool, styles: dict) -> str:
         stripped = line.strip()
         if not stripped:
             return ""
 
         if stripped.startswith("===") and stripped.endswith("==="):
             title = stripped.strip("= ").strip()
-            return f'<div style="{SUBHEADER_STYLE}">{title}</div>'
+            return f'<div style="{styles["subheader"]}">{title}</div>'
 
         if stripped.startswith("!!") and stripped.endswith("!!"):
             text = stripped.strip("! ").strip()
-            return f'<div style="{DANGER_STYLE}">{text}</div>'
+            return f'<div style="{styles["danger"]}">{text}</div>'
 
         if is_first:
-            return f'<div style="{HEADER_STYLE}">{stripped}</div>'
+            return (
+                f'<div style="{styles["header"]}">{stripped}</div>'
+                f'<div style="{styles["divider"]}"></div>'
+            )
 
         if stripped.startswith("|"):
             cols = stripped.strip("|").split("|")
@@ -3011,11 +3456,11 @@ class Main(BaseModule):
                 c = col.strip()
                 if not c:
                     continue
-                inner += f'<div style="{COL_ITEM_STYLE}">{c}</div>'
-            return f'<div style="{COL_STYLE}">{inner}</div>' if inner else ""
+                inner += f'<div style="{styles["col_item"]}">{c}</div>'
+            return f'<div style="{styles["col"]}">{inner}</div>' if inner else ""
 
         if len(stripped) > 1 and stripped[0].isdigit() and stripped[1] in ". ":
-            return f'<div style="{ITEM_STYLE}">{stripped}</div>'
+            return f'<div style="{styles["item"]}">{stripped}</div>'
 
         if "|" in stripped and not stripped[0].isdigit():
             cols = stripped.split("|")
@@ -3024,8 +3469,8 @@ class Main(BaseModule):
                 c = col.strip()
                 if not c:
                     continue
-                inner += f'<div style="{COL_ITEM_STYLE}">{c}</div>'
-            return f'<div style="{COL_STYLE}">{inner}</div>' if inner else ""
+                inner += f'<div style="{styles["col_item"]}">{c}</div>'
+            return f'<div style="{styles["col"]}">{inner}</div>' if inner else ""
 
         if ":" in stripped:
             idx = stripped.index(":")
@@ -3033,27 +3478,93 @@ class Main(BaseModule):
             val = stripped[idx + 1 :].strip()
             if key and val:
                 return (
-                    f'<div style="{KV_STYLE}">'
-                    f'<span style="{KV_KEY_STYLE}">{key}:</span> {val}'
+                    f'<div style="{styles["kv"]}">'
+                    f'<span style="{styles["kv_key"]}">{key}:</span> {val}'
                     f"</div>"
                 )
 
-        return f'<div style="{BODY_STYLE}">{stripped}</div>'
+        return f'<div style="{styles["body"]}">{stripped}</div>'
 
-    def _build_html(self, text: str, image_url: Optional[str] = None) -> str:
-        raw_lines = text.strip().split("\n")
-        html = f'<div style="{MENU_STYLE}">'
+    def _get_styles(self, card_type: str = "menu") -> dict:
+        theme = CARD_THEMES.get(card_type, CARD_THEMES["menu"])
+        accent = theme["accent"]
+        bg = theme["bg"]
+        header_color = theme["header_color"]
+        tag_bg = theme["tag_bg"]
+        border = theme["border"]
+        text_color = theme["text"]
+        text_sub = theme.get("text_sub", "#666666")
+
+        return {
+            "wrapper": (
+                f"padding:20px 24px;border-radius:16px;font-size:14px;"
+                f"line-height:1.7;{_FONT}"
+                f"background:{bg};"
+                f"color:{text_color};"
+                f"box-shadow:0 4px 12px rgba(0,0,0,0.08);"
+                f"border:1px solid {border};"
+            ),
+            "header": (
+                f"font-size:18px;font-weight:600;"
+                f"color:{header_color};letter-spacing:-0.01em;"
+            ),
+            "divider": (
+                f"height:1px;background:{border};margin:8px 0 12px 0;opacity:0.6;"
+            ),
+            "subheader": (
+                f"font-weight:500;padding:6px 16px;border-radius:12px;"
+                f"color:{header_color};background:{tag_bg};"
+                f"display:inline-block;margin:8px 0 4px 0;font-size:13px;"
+                f"border:1px solid {border};"
+            ),
+            "item": (
+                f"padding:4px 10px;color:{text_color};border-radius:8px;"
+                f"margin:1px 0;font-size:14px;"
+            ),
+            "kv": (
+                f"margin-bottom:2px;font-size:14px;color:{text_color};padding:2px 0;"
+            ),
+            "kv_key": f"color:{text_sub};font-weight:500;",
+            "warn": (
+                f"padding:10px 14px;background:{tag_bg};border-radius:8px;"
+                f"font-size:13px;color:{accent};margin:6px 0;"
+                f"border:1px solid {border};"
+            ),
+            "danger": (
+                f"padding:10px 14px;background:{tag_bg};border-radius:8px;"
+                f"font-size:13px;color:{accent};margin:6px 0;"
+                f"border:1px solid {border};"
+            ),
+            "success": (
+                f"padding:10px 14px;background:{tag_bg};border-radius:8px;"
+                f"font-size:13px;color:{accent};margin:6px 0;"
+                f"border:1px solid {border};"
+            ),
+            "muted": f"color:{text_sub};font-size:12px;",
+            "body": f"margin-bottom:3px;font-size:14px;color:{text_color};",
+            "col": (
+                f"display:flex;gap:8px;font-size:13px;"
+                f"font-family:monospace;color:{text_color};"
+            ),
+            "col_item": "flex:1;white-space:pre;",
+        }
+
+    def _build_html(
+        self, text: str, image_url: Optional[str] = None, card_type: str = "menu"
+    ) -> str:
+        styles = self._get_styles(card_type)
+        html = f'<div style="{styles["wrapper"]}">'
 
         if image_url:
             html += (
-                f'<div style="text-align:center;margin-bottom:10px;">'
+                f'<div style="text-align:center;margin-bottom:12px;">'
                 f'<img src="{image_url}" style="'
                 f"max-width:100%;max-height:300px;"
-                f'border-radius:8px;" /></div>'
+                f'border-radius:12px;" /></div>'
             )
 
-        for i, raw_line in enumerate(raw_lines):
-            rendered = self._render_line_html(raw_line, i == 0)
+        for i, raw_line in enumerate(text.strip().split("\n")):
+            rendered = self._render_line_html(raw_line, i == 0, styles)
             if rendered:
                 html += rendered
 
@@ -3069,7 +3580,7 @@ class Main(BaseModule):
 
             if s.startswith("===") and s.endswith("==="):
                 title = s.strip("= ").strip()
-                md += f"### {title}\n\n"
+                md += f"> **{title}**\n\n"
             elif s.startswith("!!") and s.endswith("!!"):
                 text = s.strip("! ").strip()
                 md += f"> **{text}**\n\n"
@@ -3087,9 +3598,9 @@ class Main(BaseModule):
 
         return md
 
-    # ================================================================
+    # =============================================================
     #  排行榜
-    # ================================================================
+    # =============================================================
 
     def _build_ranking(self, data: list, value_label: str, reverse: bool = True) -> str:
         sorted_data = sorted(data, key=lambda x: x[1], reverse=reverse)
@@ -3109,10 +3620,10 @@ class Main(BaseModule):
         user_id = event.get_user_id()
         self._register_user(user_id, event.get_user_nickname() or "")
         while True:
-            if self._timed_out:
+            if user_id in self._timed_out_users:
                 return
             menu = (
-                "=== 喵喵榜 ===\n\n"
+                "喵喵榜\n\n"
                 "1. 喵币榜\n"
                 "2. 存活榜\n"
                 "3. 亲密榜\n"
@@ -3122,15 +3633,17 @@ class Main(BaseModule):
             )
             await self._send_reply(event, menu)
 
-            choice = await self._wait(event)
-            if not choice:
-                return
-            if choice == "0":
+            choice = await self._wait_choice(
+                event, choices=["0", "1", "2", "3", "4", "5"]
+            )
+            if choice is None or choice == "0":
                 return
 
             all_users = self._get_all_users()
             if not all_users:
-                await self._send_reply(event, "暂无数据，还没有玩家注册~")
+                await self._send_reply(
+                    event, "暂无数据，还没有玩家注册~", card_type="info"
+                )
                 return
 
             if choice == "1":
@@ -3139,9 +3652,9 @@ class Main(BaseModule):
                     c = self._get_coins(uid)
                     if c > 0:
                         coin_data.append((uid, c))
-                header = "=== 喵币排行榜 ===\n"
+                header = "喵币排行榜\n"
                 body = self._build_ranking(coin_data, "喵币")
-                await self._send_reply(event, f"{header}\n{body}")
+                await self._send_reply(event, f"{header}\n{body}", card_type="info")
 
             elif choice == "2":
                 alive_data = []
@@ -3150,9 +3663,9 @@ class Main(BaseModule):
                     if cat and cat.get("status") == "alive":
                         days = int((time.time() - cat["adopt_time"]) / 86400)
                         alive_data.append((uid, days))
-                header = "=== 存活时长排行 ===\n"
+                header = "存活时长排行\n"
                 body = self._build_ranking(alive_data, "存活天数")
-                await self._send_reply(event, f"{header}\n{body}")
+                await self._send_reply(event, f"{header}\n{body}", card_type="info")
 
             elif choice == "3":
                 intimacy_data = []
@@ -3160,9 +3673,9 @@ class Main(BaseModule):
                     cat = self._get_cat(uid)
                     if cat and cat.get("status") == "alive":
                         intimacy_data.append((uid, cat["intimacy"]))
-                header = "=== 亲密度排行 ===\n"
+                header = "亲密度排行\n"
                 body = self._build_ranking(intimacy_data, "亲密度")
-                await self._send_reply(event, f"{header}\n{body}")
+                await self._send_reply(event, f"{header}\n{body}", card_type="info")
 
             elif choice == "4":
                 death_data = []
@@ -3171,9 +3684,9 @@ class Main(BaseModule):
                     dc = stats.get("death_count", 0)
                     if dc > 0:
                         death_data.append((uid, dc))
-                header = "=== 喵亡榜 ===\n"
+                header = "喵亡榜\n"
                 body = self._build_ranking(death_data, "死猫次数")
-                await self._send_reply(event, f"{header}\n{body}")
+                await self._send_reply(event, f"{header}\n{body}", card_type="info")
 
             elif choice == "5":
                 catched_data = []
@@ -3182,16 +3695,16 @@ class Main(BaseModule):
                     cc = stats.get("catched_count", 0)
                     if cc > 0:
                         catched_data.append((uid, cc))
-                header = "=== 黑喵榜 ===\n"
+                header = "黑喵榜\n"
                 body = self._build_ranking(catched_data, "被抓次数")
-                await self._send_reply(event, f"{header}\n{body}")
+                await self._send_reply(event, f"{header}\n{body}", card_type="info")
 
             else:
-                await self._send_reply(event, "无效选项")
+                await self._send_reply(event, "无效选项", card_type="danger")
 
-    # ================================================================
+    # =============================================================
     #  基础工具
-    # ================================================================
+    # =============================================================
 
     def _load_config(self) -> dict:
         default_config = {"timeout": 10}
@@ -3217,54 +3730,110 @@ class Main(BaseModule):
             self.logger.error(f"获取图片失败 ({category}): {e}")
         return None
 
-    async def _send_reply(self, event, content: str, image_url: Optional[str] = None):
+    def _store_msg_id(self, user_id: str, response):
+        if not isinstance(response, dict):
+            return
+        msg_id = response.get("message_id", "") or ""
+        if not msg_id:
+            data = response.get("data")
+            if isinstance(data, dict):
+                msg_id = data.get("message_id", "") or ""
+            if not msg_id:
+                msg_info = data.get("messageInfo") if data else None
+                if isinstance(msg_info, dict):
+                    msg_id = msg_info.get("msgId", "") or ""
+        if msg_id:
+            self._last_msg_ids[user_id] = msg_id
+
+    async def _try_edit_message(
+        self, event, message_id: str, content: str, card_type: str = "menu"
+    ) -> bool:
+        try:
+            html = self._build_html(content, card_type=card_type)
+            result = await event.reply(html, method="HTML", message_id=message_id)
+            if isinstance(result, dict) and result.get("status") == "ok":
+                return True
+        except Exception:
+            pass
+        return False
+
+    async def _send_reply(
+        self,
+        event,
+        content: str,
+        image_url: Optional[str] = None,
+        card_type: str = "menu",
+        force_new: bool = False,
+    ):
+        user_id = event.get_user_id()
         platform = event.get_platform()
         supported = self._get_supported_methods(platform)
+
+        if not force_new and not image_url:
+            last_msg_id = self._last_msg_ids.get(user_id)
+            if last_msg_id:
+                if await self._try_edit_message(event, last_msg_id, content, card_type):
+                    return
 
         if image_url:
             if "Html" in supported:
                 try:
-                    await event.reply(
-                        self._build_html(content, image_url), method="HTML"
+                    result = await event.reply(
+                        self._build_html(
+                            content, image_url=image_url, card_type=card_type
+                        ),
+                        method="HTML",
                     )
+                    self._store_msg_id(user_id, result)
                     return
                 except Exception as e:
                     self.logger.warning(f"HTML 发送失败: {e}")
 
             if "Markdown" in supported:
                 try:
-                    await event.reply(
-                        self._build_markdown(content, image_url), method="Markdown"
+                    result = await event.reply(
+                        self._build_markdown(content, image_url=image_url),
+                        method="Markdown",
                     )
+                    self._store_msg_id(user_id, result)
                     return
                 except Exception as e:
                     self.logger.warning(f"Markdown 发送失败: {e}")
 
             if "Image" in supported:
                 try:
-                    await event.reply(image_url, method="Image")
+                    result = await event.reply(image_url, method="Image")
+                    self._store_msg_id(user_id, result)
                     await event.reply(content)
                     return
                 except Exception as e:
                     self.logger.warning(f"Image 发送失败: {e}")
 
-            await event.reply(content)
+            result = await event.reply(content)
+            self._store_msg_id(user_id, result)
         else:
             if "Html" in supported:
                 try:
-                    await event.reply(self._build_html(content), method="HTML")
+                    result = await event.reply(
+                        self._build_html(content, card_type=card_type), method="HTML"
+                    )
+                    self._store_msg_id(user_id, result)
                     return
                 except Exception as e:
                     self.logger.warning(f"HTML 发送失败: {e}")
 
             if "Markdown" in supported:
                 try:
-                    await event.reply(self._build_markdown(content), method="Markdown")
+                    result = await event.reply(
+                        self._build_markdown(content), method="Markdown"
+                    )
+                    self._store_msg_id(user_id, result)
                     return
                 except Exception as e:
                     self.logger.warning(f"Markdown 发送失败: {e}")
 
-            await event.reply(content)
+            result = await event.reply(content)
+            self._store_msg_id(user_id, result)
 
     def _get_supported_methods(self, platform: str) -> list:
         if hasattr(self.sdk.adapter, "list_sends"):
