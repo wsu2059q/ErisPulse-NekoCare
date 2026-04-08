@@ -728,6 +728,7 @@ class Main(BaseModule):
         @command("猫猫状态", help="查看猫猫状态")
         async def status_cmd(cmd_event):
             user_id = cmd_event.get_user_id()
+            self._timed_out_users.discard(user_id)
             self._register_user(user_id, cmd_event.get_user_nickname() or "")
             cat_data, status = self._apply_hunger_decay(user_id)
             if not cat_data:
@@ -737,25 +738,30 @@ class Main(BaseModule):
 
         @command("猫猫喂食", help="喂食/互动")
         async def feed_cmd(cmd_event):
+            self._timed_out_users.discard(cmd_event.get_user_id())
             await self._cmd_ensure_alive(cmd_event, self._handle_feed_menu)
 
         @command("猫猫打工", help="打工赚钱")
         async def work_cmd(cmd_event):
+            self._timed_out_users.discard(cmd_event.get_user_id())
             await self._cmd_ensure_alive(cmd_event, self._handle_earn_menu)
 
         @command("猫猫银行", help="喵喵银行")
         async def bank_cmd(cmd_event):
             user_id = cmd_event.get_user_id()
+            self._timed_out_users.discard(user_id)
             self._register_user(user_id, cmd_event.get_user_nickname() or "")
             await self._handle_bank(cmd_event, user_id)
 
         @command("猫猫学习", help="学习深造")
         async def study_cmd(cmd_event):
+            self._timed_out_users.discard(cmd_event.get_user_id())
             await self._cmd_ensure_alive(cmd_event, self._handle_study)
 
         @command("猫猫背包", help="背包/商城")
         async def bag_cmd(cmd_event):
             user_id = cmd_event.get_user_id()
+            self._timed_out_users.discard(user_id)
             self._register_user(user_id, cmd_event.get_user_nickname() or "")
             await self._handle_bag_menu(cmd_event, user_id)
 
@@ -1400,11 +1406,14 @@ class Main(BaseModule):
         coins = self._get_coins(user_id)
 
         available = []
+        display_indices = []
         for i, name in enumerate(SHOP_ITEM_LIST):
             count = inventory.get(name, 0)
             if count > 0:
                 item = SHOP_ITEMS[name]
-                available.append((i + 1, name, count, item))
+                display_idx = i + 1
+                available.append((display_idx, name, count, item))
+                display_indices.append(display_idx)
 
         has_tools = False
         tool_lines = []
@@ -1428,105 +1437,111 @@ class Main(BaseModule):
         lines.append("\n输入编号使用 | 0 返回")
         await self._send_reply(event, "\n".join(lines))
 
+        max_display = max(display_indices) if display_indices else 0
         choice = await self._wait_choice(
-            event, expect="int", min_val=0, max_val=len(available)
+            event, expect="int", min_val=min_display, max_val=max_display
         )
         if choice is None or choice == 0:
             return
 
         selected_idx = choice
-
+        selected_item = None
         for idx, name, count, item in available:
             if idx == selected_idx:
-                cat_data, status = self._apply_hunger_decay(user_id)
+                selected_item = (idx, name, count, item)
+                break
 
-                if item["type"] == "consumable":
-                    if not cat_data:
-                        await self._send_reply(event, "你还没有猫猫，无法使用此道具")
-                        return
-                    if status == "dead":
-                        await self._send_dead_message(event, cat_data)
-                        return
-                    if status == "fostered":
-                        await self._send_reply(event, "猫猫正在寄养中，无法使用此道具")
-                        return
+        if selected_item is None:
+            await self._send_reply(event, "无效编号", card_type="danger")
+            return
 
-                    await self._send_reply(
-                        event, f"使用几个【{name}】? (1-{count})，输入数量:"
-                    )
-                    qty = await self._wait_choice(
-                        event, expect="int", min_val=1, max_val=count
-                    )
-                    if qty is None:
-                        return
+        idx, name, count, item = selected_item
+        cat_data, status = self._apply_hunger_decay(user_id)
 
-                    effect = item["effect"]
-                    total_fullness_gain = effect.get("fullness", 0) * qty
-                    total_intimacy_gain = effect.get("intimacy", 0) * qty
-
-                    if "fullness" in effect:
-                        cat_data["fullness"] = min(
-                            100, cat_data["fullness"] + total_fullness_gain
-                        )
-                    if "intimacy" in effect:
-                        cat_data["intimacy"] = min(
-                            100, cat_data["intimacy"] + total_intimacy_gain
-                        )
-                    if "hp_boost" in effect:
-                        self._mod_attr(user_id, "hp", effect["hp_boost"] * qty)
-
-                    if status == "critical" and cat_data["fullness"] > 0:
-                        cat_data["status"] = "alive"
-                        cat_data["critical_since"] = 0
-                        cat_data["last_decay"] = time.time()
-
-                    self.sdk.storage.set(f"nekocare:{user_id}", cat_data)
-                    self._remove_inventory(user_id, name, qty)
-
-                    fl, _ = self._get_stat_style("fullness", cat_data["fullness"])
-                    il, _ = self._get_stat_style("intimacy", cat_data["intimacy"])
-
-                    parts = []
-                    if total_fullness_gain:
-                        parts.append(f"饱食度+{total_fullness_gain}")
-                    if total_intimacy_gain:
-                        parts.append(f"亲密度+{total_intimacy_gain}")
-                    if "hp_boost" in effect:
-                        parts.append(f"体力+{effect['hp_boost'] * qty}")
-
-                    status_line = f"当前状态: 饱食度 {cat_data['fullness']}/100 亲密度 {cat_data['intimacy']}/100"
-                    url = await self._fetch_image("happy")
-                    await self._send_reply(
-                        event,
-                        f"使用了【{name}】x{qty}! {', '.join(parts)}\n{status_line}",
-                        image_url=url,
-                        card_type="success",
-                    )
-
-                elif item["type"] == "buff":
-                    buffs = self._get_buffs(user_id)
-                    buffs[item["buff"]] = True
-                    self._set_buffs(user_id, buffs)
-                    self._remove_inventory(user_id, name, 1)
-
-                    url = await self._fetch_image("neko")
-                    await self._send_reply(
-                        event,
-                        f"使用了【{name}】! 增益已激活。",
-                        image_url=url,
-                        card_type="success",
-                    )
-
-                elif item["type"] == "tool":
-                    await self._send_reply(
-                        event,
-                        f"【{name}】是工具类道具，用于抢劫!\n"
-                        f"去 /猫猫打工 → 打劫 → 抢劫地点 使用。",
-                        card_type="info",
-                    )
+        if item["type"] == "consumable":
+            if not cat_data:
+                await self._send_reply(event, "你还没有猫猫，无法使用此道具")
+                return
+            if status == "dead":
+                await self._send_dead_message(event, cat_data)
+                return
+            if status == "fostered":
+                await self._send_reply(event, "猫猫正在寄养中，无法使用此道具")
                 return
 
-        await self._send_reply(event, "无效编号", card_type="danger")
+            await self._send_reply(
+                event, f"使用几个【{name}】? (1-{count})，输入数量:"
+            )
+            qty = await self._wait_choice(
+                event, expect="int", min_val=1, max_val=count
+            )
+            if qty is None:
+                return
+
+            effect = item["effect"]
+            total_fullness_gain = effect.get("fullness", 0) * qty
+            total_intimacy_gain = effect.get("intimacy", 0) * qty
+
+            if "fullness" in effect:
+                cat_data["fullness"] = min(
+                    100, cat_data["fullness"] + total_fullness_gain
+                )
+            if "intimacy" in effect:
+                cat_data["intimacy"] = min(
+                    100, cat_data["intimacy"] + total_intimacy_gain
+                )
+            if "hp_boost" in effect:
+                self._mod_attr(user_id, "hp", effect["hp_boost"] * qty)
+
+            if status == "critical" and cat_data["fullness"] > 0:
+                cat_data["status"] = "alive"
+                cat_data["critical_since"] = 0
+                cat_data["last_decay"] = time.time()
+
+            self.sdk.storage.set(f"nekocare:{user_id}", cat_data)
+            self._remove_inventory(user_id, name, qty)
+
+            fl, _ = self._get_stat_style("fullness", cat_data["fullness"])
+            il, _ = self._get_stat_style("intimacy", cat_data["intimacy"])
+
+            parts = []
+            if total_fullness_gain:
+                parts.append(f"饱食度+{total_fullness_gain}")
+            if total_intimacy_gain:
+                parts.append(f"亲密度+{total_intimacy_gain}")
+            if "hp_boost" in effect:
+                parts.append(f"体力+{effect['hp_boost'] * qty}")
+
+            status_line = f"当前状态: 饱食度 {cat_data['fullness']}/100 亲密度 {cat_data['intimacy']}/100"
+            url = await self._fetch_image("happy")
+            await self._send_reply(
+                event,
+                f"使用了【{name}】x{qty}! {', '.join(parts)}\n{status_line}",
+                image_url=url,
+                card_type="success",
+            )
+
+        elif item["type"] == "buff":
+            buffs = self._get_buffs(user_id)
+            buffs[item["buff"]] = True
+            self._set_buffs(user_id, buffs)
+            self._remove_inventory(user_id, name, 1)
+
+            url = await self._fetch_image("neko")
+            await self._send_reply(
+                event,
+                f"使用了【{name}】! 增益已激活。",
+                image_url=url,
+                card_type="success",
+            )
+
+        elif item["type"] == "tool":
+            await self._send_reply(
+                event,
+                f"【{name}】是工具类道具，用于抢劫!\n"
+                f"去 /猫猫打工 → 打劫 → 抢劫地点 使用。",
+                card_type="info",
+            )
 
     async def _handle_titles(self, event, user_id):
         titles = self._get_titles(user_id)
