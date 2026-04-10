@@ -15,61 +15,61 @@ FOSTER_COST_PER_DAY = 5
 FOSTER_MAX_DAYS = 7
 
 SHOP_ITEMS = {
-    "小鱼干": {
+    "🐟 - 小鱼干": {
         "price": 8,
         "desc": "恢复15点饱食度",
         "type": "consumable",
         "effect": {"fullness": 15},
     },
-    "猫粮罐头": {
+    "🥫 - 猫粮罐头": {
         "price": 15,
         "desc": "恢复25点饱食度",
         "type": "consumable",
         "effect": {"fullness": 25},
     },
-    "高级猫粮": {
+    "🥫 - 高级猫粮": {
         "price": 35,
         "desc": "恢复50点饱食度",
         "type": "consumable",
         "effect": {"fullness": 50},
     },
-    "豪华猫宴": {
+    "🍽️ - 豪华猫宴": {
         "price": 60,
         "desc": "恢复80点饱食度",
         "type": "consumable",
         "effect": {"fullness": 80},
     },
-    "亲密度糖果": {
+    "🍬 - 亲密糖果": {
         "price": 40,
         "desc": "亲密度+10",
         "type": "consumable",
         "effect": {"intimacy": 10},
     },
-    "猫薄荷": {
+    "🌿 - 猫薄荷": {
         "price": 25,
         "desc": "亲密度+5 饱食度+10",
         "type": "consumable",
         "effect": {"intimacy": 5, "fullness": 10},
     },
-    "体力药水": {
+    "🍫 - 能量棒": {
         "price": 30,
         "desc": "体力+15",
         "type": "consumable",
         "effect": {"hp_boost": 15},
     },
-    "金币加成卡": {
+    "🧧 - 聚宝喵符": {
         "price": 80,
         "desc": "下次打工收益翻倍",
         "type": "buff",
         "buff": "work_double",
     },
-    "幸运铃铛": {
+    "🔔 - 幸运铃铛": {
         "price": 60,
         "desc": "下次抓猫成功率+25%",
         "type": "buff",
         "buff": "catch_boost",
     },
-    "急救包": {
+    "🩹 - 急救包": {
         "price": 100,
         "desc": "免费急救一次",
         "type": "buff",
@@ -79,50 +79,71 @@ SHOP_ITEMS = {
 
 SHOP_ITEM_LIST = list(SHOP_ITEMS.keys())
 
-DEATH_TITLES = {"starve": "饿死大王", "overwork": "劳累过度"}
-ABANDON_TITLE = "弃养者"
+DEATH_TITLES = {
+    "starve": "😵 - 饿死大王",
+    "overwork": "💪 - 劳累过度"
+}
+
+ABANDON_TITLE = "🚫 - 弃养者"
 
 ALL_TITLES = {
-    "death": ["饿死大王", "劳累过度"],
-    "punish": ["弃养者"],
+    "death": ["😵 - 饿死大王", "💪 - 劳累过度"],
+    "punish": ["🚫 - 弃养者"],
     "achievement": [
-        "打工狂魔",
-        "捕猫达人",
-        "神医再世",
-        "富可敌国",
-        "好主人",
-        "理财圣手",
-        "止盈大师",
-        "富贵险求",
-        "果断梭哈",
-        "千金散尽",
-        "散尽家财",
-        "负债累累",
-        "佛系玩家",
-        "欧皇附体",
-        "非酋酋长",
-        "驭猫达人",
+        "⚒️ - 打工狂魔",
+        "🐱 - 捕猫达人",
+        "🩺 - 神医再世",
+        "💰 - 富可敌国",
+        "❤️ - 好主人",
+        "📈 - 理财圣手",
+        "🛑 - 止盈大师",
+        "🎲 - 富贵险求",
+        "🚀 - 果断梭哈",
+        "💸 - 千金散尽",
+        "📉 - 散尽家财",
+        "⛔ - 负债累累",
+        "🧘 - 佛系玩家",
+        "🌟 - 欧皇附体",
+        "🎭 - 非酋酋长",
+        "🐾 - 驭猫达人",
     ],
-    "cute": ["萌系可爱", "软萌可爱", "软萌喵系", "萌态万千", "人间可爱", "盛世美颜"],
-    "rich": ["清丽多金", "俊朗多金"],
+    "cute": [
+        "🌸 - 萌系可爱",
+        "🍡 - 软萌可爱",
+        "🐱 - 软萌喵系",
+        "🌟 - 萌态万千",
+        "🌙 - 人间可爱",
+        "✨ - 盛世美颜"
+    ],
+    "rich": [
+        "💎 - 清丽多金",
+        "💼 - 俊朗多金"
+    ],
 }
 
 EDU_LEVELS = {
-    0: {"name": "无学历", "cost": 0},
-    1: {"name": "喵喵小学", "cost": 0},
-    2: {"name": "喵喵初中", "cost": 80},
-    3: {"name": "喵喵高中", "cost": 200},
-    4: {"name": "猫大专", "cost": 500},
-    5: {"name": "猫大学", "cost": 1200},
-    6: {"name": "猫研究生院", "cost": 3000},
+    0: {"name": "🎒 - 未入学", "cost": 0},
+    1: {"name": "🏫 - 萌喵小学", "cost": 0},
+    2: {"name": "🏫 - 萌喵初中", "cost": 80},
+    3: {"name": "🏫 - 萌喵高中", "cost": 200},
+    4: {"name": "🎓 - 萌喵专科", "cost": 500},
+    5: {"name": "🎓 - 萌喵大学", "cost": 1200},
+    6: {"name": "🔬 - 喵星研究院", "cost": 3000},
 }
 
-EDU_STUDY_TIME = {1: 1800, 2: 3600, 3: 5400, 4: 7200, 5: 10800, 6: 21600}
+EDU_STUDY_TIME = {
+    1: 1800,
+    2: 3600,
+    3: 5400,
+    4: 7200,
+    5: 10800,
+    6: 21600
+}
 
 JOBS = {
     0: [
         {
-            "name": "捡瓶子",
+            "name": "🫙 - 捡拾空瓶",
             "earn_min": 5,
             "earn_max": 15,
             "nrg_min": 5,
@@ -130,7 +151,7 @@ JOBS = {
             "stat": "hp",
         },
         {
-            "name": "扫大街",
+            "name": "🧹 - 街区清扫",
             "earn_min": 8,
             "earn_max": 18,
             "nrg_min": 5,
@@ -138,7 +159,7 @@ JOBS = {
             "stat": "hp",
         },
         {
-            "name": "街边卖小鱼干",
+            "name": "🐟 - 摆摊卖小鱼干",
             "earn_min": 6,
             "earn_max": 22,
             "nrg_min": 5,
@@ -148,7 +169,7 @@ JOBS = {
     ],
     1: [
         {
-            "name": "送鱼外卖",
+            "name": "🚚 - 生鲜配送员",
             "earn_min": 10,
             "earn_max": 28,
             "nrg_min": 8,
@@ -156,7 +177,7 @@ JOBS = {
             "stat": "hp",
         },
         {
-            "name": "猫砂厂打工",
+            "name": "🧺 - 猫砂厂操作工",
             "earn_min": 12,
             "earn_max": 25,
             "nrg_min": 10,
@@ -164,7 +185,7 @@ JOBS = {
             "stat": "hp",
         },
         {
-            "name": "搬运猫粮",
+            "name": "📦 - 猫粮搬运工",
             "earn_min": 12,
             "earn_max": 30,
             "nrg_min": 10,
@@ -174,7 +195,7 @@ JOBS = {
     ],
     2: [
         {
-            "name": "便利店员",
+            "name": "🏪 - 便利店店员",
             "earn_min": 15,
             "earn_max": 38,
             "nrg_min": 8,
@@ -182,7 +203,7 @@ JOBS = {
             "stat": "cha",
         },
         {
-            "name": "保安",
+            "name": "🛡️ - 小区安保",
             "earn_min": 18,
             "earn_max": 42,
             "nrg_min": 10,
@@ -190,7 +211,7 @@ JOBS = {
             "stat": "hp",
         },
         {
-            "name": "宠物店助手",
+            "name": "🐾 - 宠物店助理",
             "earn_min": 16,
             "earn_max": 35,
             "nrg_min": 8,
@@ -200,7 +221,7 @@ JOBS = {
     ],
     3: [
         {
-            "name": "喵喵快递员",
+            "name": "📦 - 快递配送员",
             "earn_min": 20,
             "earn_max": 52,
             "nrg_min": 10,
@@ -208,7 +229,7 @@ JOBS = {
             "stat": "hp",
         },
         {
-            "name": "猫咖服务员",
+            "name": "☕ - 猫咖服务生",
             "earn_min": 22,
             "earn_max": 48,
             "nrg_min": 8,
@@ -216,7 +237,7 @@ JOBS = {
             "stat": "cha",
         },
         {
-            "name": "汽修猫",
+            "name": "🔧 - 车辆维修师",
             "earn_min": 25,
             "earn_max": 58,
             "nrg_min": 12,
@@ -226,7 +247,7 @@ JOBS = {
     ],
     4: [
         {
-            "name": "宠物医生助理",
+            "name": "🩺 - 宠物医师助理",
             "earn_min": 28,
             "earn_max": 62,
             "nrg_min": 10,
@@ -234,7 +255,7 @@ JOBS = {
             "stat": "int",
         },
         {
-            "name": "喵喵银行柜员",
+            "name": "🏦 - 喵星银行柜员",
             "earn_min": 30,
             "earn_max": 65,
             "nrg_min": 10,
@@ -242,7 +263,7 @@ JOBS = {
             "stat": "cha",
         },
         {
-            "name": "程序员",
+            "name": "💻 - 软件开发师",
             "earn_min": 32,
             "earn_max": 72,
             "nrg_min": 12,
@@ -252,7 +273,7 @@ JOBS = {
     ],
     5: [
         {
-            "name": "猫学校教师",
+            "name": "🍎 - 喵园教师",
             "earn_min": 40,
             "earn_max": 92,
             "nrg_min": 12,
@@ -260,7 +281,7 @@ JOBS = {
             "stat": "int",
         },
         {
-            "name": "金融分析师",
+            "name": "📊 - 金融分析师",
             "earn_min": 45,
             "earn_max": 98,
             "nrg_min": 12,
@@ -268,7 +289,7 @@ JOBS = {
             "stat": "int",
         },
         {
-            "name": "设计师",
+            "name": "🎨 - 创意设计师",
             "earn_min": 42,
             "earn_max": 88,
             "nrg_min": 10,
@@ -276,7 +297,7 @@ JOBS = {
             "stat": "cha",
         },
         {
-            "name": "工程师",
+            "name": "🏗️ - 土木工程师",
             "earn_min": 44,
             "earn_max": 95,
             "nrg_min": 12,
@@ -286,7 +307,7 @@ JOBS = {
     ],
     6: [
         {
-            "name": "猫教授",
+            "name": "🎓 - 喵星大学教授",
             "earn_min": 60,
             "earn_max": 130,
             "nrg_min": 15,
@@ -294,7 +315,7 @@ JOBS = {
             "stat": "int",
         },
         {
-            "name": "基金经理",
+            "name": "💹 - 基金投资经理",
             "earn_min": 65,
             "earn_max": 140,
             "nrg_min": 15,
@@ -302,7 +323,7 @@ JOBS = {
             "stat": "int",
         },
         {
-            "name": "猫猫研究院研究员",
+            "name": "🔬 - 科研院研究员",
             "earn_min": 60,
             "earn_max": 128,
             "nrg_min": 15,
@@ -310,7 +331,7 @@ JOBS = {
             "stat": "int",
         },
         {
-            "name": "城市规划猫",
+            "name": "🏙️ - 城市规划师",
             "earn_min": 65,
             "earn_max": 138,
             "nrg_min": 15,
@@ -318,7 +339,7 @@ JOBS = {
             "stat": "int",
         },
         {
-            "name": "企业高管",
+            "name": "💼 - 集团企业高管",
             "earn_min": 70,
             "earn_max": 155,
             "nrg_min": 15,
@@ -330,7 +351,7 @@ JOBS = {
 
 HIDDEN_JOBS = [
     {
-        "name": "赏金猎猫",
+        "name": "🏹 - 赏金猎喵",
         "earn_min": 50,
         "earn_max": 120,
         "nrg_min": 15,
@@ -340,7 +361,7 @@ HIDDEN_JOBS = [
         "stat": "cha",
     },
     {
-        "name": "黑市中介",
+        "name": "🕶️ - 黑市中间人",
         "earn_min": 40,
         "earn_max": 100,
         "nrg_min": 12,
@@ -349,7 +370,7 @@ HIDDEN_JOBS = [
         "stat": "cha",
     },
     {
-        "name": "猫窝设计师",
+        "name": "🏠 - 猫居设计师",
         "earn_min": 60,
         "earn_max": 130,
         "nrg_min": 12,
@@ -360,15 +381,24 @@ HIDDEN_JOBS = [
     },
 ]
 
-STOCK_LIST = ["喵粮股", "猫砂股", "猫薄荷股", "鱼干公司", "猫爬架集团", "罐头科技"]
+STOCK_LIST = [
+    "🍱 - 喵粮股",
+    "🧺 - 猫砂股",
+    "🌿 - 猫薄荷股",
+    "🐟 - 鱼干公司",
+    "🪑 - 猫爬架集团",
+    "🥫 - 罐头科技",
+    "✨ - ErisPulse"
+]
 
 STOCK_BASE_PRICES = {
-    "喵粮股": 100,
-    "猫砂股": 50,
-    "猫薄荷股": 200,
-    "鱼干公司": 150,
-    "猫爬架集团": 80,
-    "罐头科技": 300,
+    "🍱 - 喵粮股": 100,
+    "🧺 - 猫砂股": 50,
+    "🌿 - 猫薄荷股": 200,
+    "🐟 - 鱼干公司": 150,
+    "🪑 - 猫爬架集团": 80,
+    "🥫 - 罐头科技": 300,
+    "✨ - ErisPulse": 1000,
 }
 
 BANK_INTEREST_REGULAR = 0.03
@@ -385,36 +415,36 @@ SIGNIN_BASE = 20
 SIGNIN_STREAK_BONUS = 10
 
 SIGNIN_TYPES = {
-    "signin": {"label": "签到", "coins": 20, "intimacy": 0},
-    "morning": {"label": "早安", "coins": 8, "intimacy": 2},
-    "noon": {"label": "午安", "coins": 8, "intimacy": 2},
-    "night": {"label": "晚安", "coins": 8, "intimacy": 2},
+    "signin": {"label": "📅 - 签到", "coins": 20, "intimacy": 0},
+    "morning": {"label": "☀️ - 早安", "coins": 8, "intimacy": 2},
+    "noon": {"label": "☀️ - 午安", "coins": 8, "intimacy": 2},
+    "night": {"label": "🌙 - 晚安", "coins": 8, "intimacy": 2},
 }
 
 INVESTMENTS = [
     {
-        "name": "稳健基金",
+        "name": "🛡️ - 稳健基金",
         "cost": 100,
         "profit_min": 8,
         "profit_max": 20,
         "fail_rate": 0.02,
     },
     {
-        "name": "债券理财",
+        "name": "📜 - 债券理财",
         "cost": 300,
         "profit_min": 25,
         "profit_max": 70,
         "fail_rate": 0.05,
     },
     {
-        "name": "风险投资",
+        "name": "⚖️ - 风险投资",
         "cost": 500,
         "profit_min": 50,
         "profit_max": 250,
         "fail_rate": 0.12,
     },
     {
-        "name": "运气投资",
+        "name": "🎲 - 运气投资",
         "cost": 1000,
         "profit_min": 200,
         "profit_max": 1200,
@@ -423,63 +453,63 @@ INVESTMENTS = [
 ]
 
 NPC_CATS = [
-    "橘座",
-    "布偶妹妹",
-    "三花大姐",
-    "黑猫警长",
-    "暹罗少爷",
-    "狸花老哥",
-    "奶牛仔",
-    "英短胖虎",
-    "美短小花",
-    "无毛猫王",
-    "波斯公主",
-    "缅因大佬",
-    "折耳弟弟",
-    "加菲吃货",
-    "狮子猫侠",
+    "🐱 - 橘座",
+    "🎀 - 布偶妹妹",
+    "🐅 - 三花大姐",
+    "⚫ - 黑猫警长",
+    "🐶 - 暹罗少爷",
+    "🐯 - 狸花老哥",
+    "🐄 - 奶牛仔",
+    "🐻 - 英短胖虎",
+    "🌸 - 美短小花",
+    "👑 - 无毛猫王",
+    "👸 - 波斯公主",
+    "🦁 - 缅因大佬",
+    "🧸 - 折耳弟弟",
+    "🍚 - 加菲吃货",
+    "🦸 - 狮子猫侠",
 ]
 
 ROB_NPC_LOOT = {"min": 10, "max": 50}
 
 BLACKMARKET_ITEMS = {
-    "棒球棍": {
+    "🔨 - 棒球棍": {
         "price": 80,
         "desc": "抢劫便利店/加油站必备",
         "type": "tool",
         "tool_tag": "melee",
     },
-    "黑丝头套": {
+    "🕶️ - 黑丝头套": {
         "price": 120,
         "desc": "遮挡面孔，降低被捕风险",
         "type": "tool",
         "tool_tag": "disguise",
     },
-    "炸药": {
+    "🧨 - 炸药": {
         "price": 200,
         "desc": "抢劫银行/珠宝店必备",
         "type": "tool",
         "tool_tag": "explosive",
     },
-    "银行密码": {
+    "🔐 - 银行密码": {
         "price": 300,
         "desc": "抢劫银行必备 (一次性)",
         "type": "tool",
         "tool_tag": "bank_code",
     },
-    "钻机": {
+    "⚙️ - 手携式钻机": {
         "price": 250,
         "desc": "抢劫珠宝店必备",
         "type": "tool",
         "tool_tag": "drill",
     },
-    "撬棍": {
+    "🔧 - 撬棍": {
         "price": 60,
         "desc": "撬开ATM机/便利店后门",
         "type": "tool",
         "tool_tag": "pry_bar",
     },
-    "逃跑工具": {
+    "🏃 - 逃跑工具": {
         "price": 150,
         "desc": "逃跑更快，降低被捕率",
         "type": "tool",
@@ -490,7 +520,7 @@ BLACKMARKET_ITEMS = {
 BLACKMARKET_ITEM_LIST = list(BLACKMARKET_ITEMS.keys())
 
 ROB_TARGETS = {
-    "便利店": {
+    "🏪 - 便利店": {
         "require": ["melee"],
         "optional": ["disguise", "getaway"],
         "loot_min": 30,
@@ -500,7 +530,7 @@ ROB_TARGETS = {
         "cooldown": 1800,
         "rep_loss": 5,
     },
-    "加油站": {
+    "⛽ - 加油站": {
         "require": ["melee"],
         "optional": ["disguise", "getaway"],
         "loot_min": 40,
@@ -510,7 +540,7 @@ ROB_TARGETS = {
         "cooldown": 1800,
         "rep_loss": 6,
     },
-    "ATM机": {
+    "🏧 - ATM机": {
         "require": ["pry_bar"],
         "optional": ["disguise", "getaway"],
         "loot_min": 50,
@@ -520,7 +550,7 @@ ROB_TARGETS = {
         "cooldown": 3600,
         "rep_loss": 8,
     },
-    "珠宝店": {
+    "💍 - 珠宝店": {
         "require": ["drill"],
         "optional": ["disguise", "explosive", "getaway"],
         "loot_min": 200,
@@ -530,7 +560,7 @@ ROB_TARGETS = {
         "cooldown": 7200,
         "rep_loss": 12,
     },
-    "银行": {
+    "🏦 - 萌喵银行": {
         "require": ["bank_code", "explosive"],
         "optional": ["disguise", "getaway"],
         "loot_min": 500,
@@ -542,12 +572,13 @@ ROB_TARGETS = {
     },
 }
 
+
 ROB_TARGET_LIST = list(ROB_TARGETS.keys())
 
 INVEST_TITLE_ACHIEVEMENTS = {
-    "invest_profit_500": ("理财圣手", "累计理财净赚500金币"),
-    "invest_profit_2000": ("止盈大师", "累计理财净赚2000金币"),
-    "invest_profit_5000": ("富贵险求", "累计理财净赚5000金币"),
+    "invest_profit_500": ("理财圣手", "累计理财净赚500喵币"),
+    "invest_profit_2000": ("止盈大师", "累计理财净赚2000喵币"),
+    "invest_profit_5000": ("富贵险求", "累计理财净赚5000喵币"),
     "invest_total_10": ("果断梭哈", "累计投资10次"),
 }
 
@@ -568,11 +599,11 @@ HELP_TEXT = (
     "--- 每日签到 ---\n"
     "消息中包含「早安/午安/晚安/签到」自动触发奖励\n"
     "无需命令，直接说话就行!\n"
-    "签到: 每天领一次金币 (连续签到奖励更多!)\n"
-    "早安/午安/晚安: 各领一次，得少量金币+亲密度\n"
+    "签到: 每天领一次喵币 (连续签到奖励更多!)\n"
+    "早安/午安/晚安: 各领一次，得少量喵币+亲密度\n"
     "全部完成额外奖励!\n\n"
     "--- 教育系统 ---\n"
-    "学历: 喵喵小学→初中→高中→大专→大学→研究生院\n"
+    "学历: 萌喵小学→初中→高中→大专→大学→研究院\n"
     "认真学习: 进度+25 智力+1~3 (推荐!)\n"
     "正常学习: 进度+15\n"
     "摸鱼: 进度+5 魅力+1~2 (偶尔扣智力)\n"
@@ -605,7 +636,7 @@ HELP_TEXT = (
     "趣味: 佛系玩家/欧皇附体/非酋酋长/驭猫达人\n"
     "负面: 弃养者/饿死大王/劳累过度\n\n"
     "--- 小贴士 ---\n"
-    "1. 每天签到+问候白拿金币!\n"
+    "1. 每天签到+问候白拿喵币!\n"
     "2. 捡瓶子/捉虫子零门槛赚零花钱\n"
     "3. 先上学提升学历 → 解锁高薪工作\n"
     "4. 打工赚到的钱存银行吃利息\n"
@@ -613,25 +644,25 @@ HELP_TEXT = (
     "6. 贷款利息有上限，不会失控\n"
     "7. 别忘了每天喂猫猫!\n\n"
     "!!! 注意 !!!\n"
-    "弃养猫猫: 扣50%金币(最低200)、学历清零、属性重置、银行清空\n"
-    "猫猫死亡: 扣30%金币(最低100)、体力-40、声望-15\n"
-    "重新领养: 扣33%金币、学历清零、属性重置、银行清空"
+    "弃养猫猫: 扣50%喵币(最低200)、学历清零、属性重置、银行清空\n"
+    "猫猫死亡: 扣30%喵币(最低100)、体力-40、声望-15\n"
+    "重新领养: 扣33%喵币、学历清零、属性重置、银行清空"
 )
 
 CARD_THEMES = {
     "menu": {
         "accent": "#D4D4AA",
-        "bg": "#FFFFFF",
+        "bg": "", # #FFFFFF
         "header_color": "#2C2C2C",
         "tag_bg": "#E8E8D0",
         "border": "#E0E0E0",
-        "text": "#2C2C2C",
+        "text": "", # #5A8CCC
         "text_sub": "#666666",
     },
     "status": {
-        "accent": "#9775fa",
-        "bg": "#FFFFFF",
-        "header_color": "#6741d9",
+        "accent": "#9775FA",
+        "bg": "", # #FFFFFF
+        "header_color": "#6741D9",
         "tag_bg": "#F3F0FF",
         "border": "#E0E0E0",
         "text": "#2C2C2C",
@@ -665,18 +696,18 @@ CARD_THEMES = {
         "text_sub": "#666666",
     },
     "death": {
-        "accent": "#adb5bd",
-        "bg": "#2d2d3a",
-        "header_color": "#dee2e6",
+        "accent": "#ADB5BD",
+        "bg": "#2D2D3A",
+        "header_color": "#DEE2E6",
         "tag_bg": "rgba(134,142,150,0.25)",
         "border": "#404040",
-        "text": "#dee2e6",
-        "text_sub": "#adb5bd",
+        "text": "#DEE2E6",
+        "text_sub": "#ADB5BD",
     },
     "info": {
-        "accent": "#1971c2",
-        "bg": "#FFFFFF",
-        "header_color": "#1971c2",
+        "accent": "#1971C2",
+        "bg": "", # #FFFFFF
+        "header_color": "#1971C2",
         "tag_bg": "#E3F2FD",
         "border": "#BBDEFB",
         "text": "#2C2C2C",
@@ -775,7 +806,7 @@ class Main(BaseModule):
             else:
                 await self._send_reply(cmd_event, "获取图片失败~", card_type="danger")
 
-        @command("喵榜", help="查看排行榜")
+        @command("喵喵榜", help="查看排行榜")
         async def leaderboard_cmd(cmd_event):
             await self._handle_leaderboard(cmd_event)
 
@@ -908,7 +939,7 @@ class Main(BaseModule):
                 else:
                     header = "欢迎来到喵喵城!\n这里有很多等待领养的小猫猫~"
 
-                menu = f"{header}\n\n1. 领养一只小猫猫\n0. 退出"
+                menu = f"{header}\n\n1. 领养一只小猫猫\n0. 🔚 - 退出"
                 await self._send_reply(event, menu)
 
                 choice = await self._wait_choice(event, choices=["0", "1"])
@@ -921,13 +952,13 @@ class Main(BaseModule):
                 foster_days = self._get_foster_days(cat_data)
                 foster_cost = self._calc_foster_cost(cat_data)
                 menu = (
-                    f"[{cat_data['name']}] 正在寄养中  金币:{coins}\n\n"
-                    f"寄养天数: {foster_days}天 | 费用: {foster_cost}金币\n"
+                    f"[{cat_data['name']}] 正在寄养中  喵币:{coins}\n\n"
+                    f"寄养天数: {foster_days}天 | 费用: {foster_cost}喵币\n"
                     f"(接回时结算，最多寄养{FOSTER_MAX_DAYS}天)\n\n"
-                    f"1. 接回家 ({foster_cost}金币)\n"
-                    f"2. 查看状态\n"
-                    f"3. 背包/商城\n"
-                    f"0. 退出"
+                    f"1. 接回家 ({foster_cost}喵币)\n"
+                    f"2. 📊 - 查看状态\n"
+                    f"3. 🛍️ - 背包/商城\n"
+                    f"0. 🔚 - 退出"
                 )
                 await self._send_reply(event, menu)
 
@@ -949,16 +980,16 @@ class Main(BaseModule):
                 attr_line = f"智:{attrs['int']} 体:{attrs['hp']} 魅:{attrs['cha']} 声:{attrs['rep']}"
                 menu = (
                     f"[{cat_data['name']}] 作为铲屎官，今天做什么呢?\n\n"
-                    f"饱食度: {fl}  金币:{coins}  学历:{edu_name}\n"
+                    f"饱食度: {fl}  喵币:{coins}  学历:{edu_name}\n"
                     f"{attr_line}\n\n"
-                    f"1. 查看状态\n"
-                    f"2. 喂食/互动\n"
-                    f"3. 赚钱\n"
-                    f"4. 喵喵银行\n"
-                    f"5. 学习深造\n"
-                    f"6. 背包/商城\n"
-                    f"7. 其他\n"
-                    f"0. 退出\n\n"
+                    f"1. 📊 - 查看状态\n"
+                    f"2. 🍼 - 喂食/互动\n"
+                    f"3. 💸 - 抢劫/赚钱\n"
+                    f"4. 🏦 - 喵喵银行\n"
+                    f"5. 📖 - 学习深造\n"
+                    f"6. 🛍️ - 背包/商城\n"
+                    f"7. 📑 - 其他列表\n"
+                    f"0. 🔚 - 退出\n\n"
                     f"快捷命令: /猫猫状态 /猫猫喂食 /猫猫打工\n"
                     f"  /猫猫银行 /猫猫学习 /猫猫背包"
                 )
@@ -1056,19 +1087,19 @@ class Main(BaseModule):
             last_scavenge = self._get_scavenge_cooldown(user_id)
             scavenge_ready = (now - last_scavenge) >= 600
 
-            wr = "✓" if work_ready else f"{int((1800 - (now - last_work)) // 60) + 1}分"
+            wr = "✔" if work_ready else f"{int((1800 - (now - last_work)) // 60) + 1}分"
             cr = (
-                "✓"
+                "✔"
                 if catch_ready
                 else f"{int((3600 - (now - last_catch)) // 60) + 1}分"
             )
             rr = (
-                "✓"
+                "✔"
                 if rob_ready
                 else f"{int((ROB_COOLDOWN - (now - last_rob)) // 60) + 1}分"
             )
             sr = (
-                "✓"
+                "✔"
                 if scavenge_ready
                 else f"{int((600 - (now - last_scavenge)) // 60) + 1}分"
             )
@@ -1146,7 +1177,7 @@ class Main(BaseModule):
             greetings = [f"晚安~", f"晚安好梦!", f"早点休息哦~"]
 
         greet = random.choice(greetings)
-        reward_text = f"+{info['coins']}金币"
+        reward_text = f"+{info['coins']}喵币"
         if ig > 0:
             reward_text += f" +{ig}亲密度"
 
@@ -1210,9 +1241,9 @@ class Main(BaseModule):
         nickname = event.get_user_nickname() or user_id
         has_cat = cat_data is not None and cat_data.get("status") == "alive"
 
-        text = f"签到成功! 第{streak}天连续签到\n+{bonus}金币"
+        text = f"签到成功! 第{streak}天连续签到\n+{bonus}喵币"
         if extra > 0:
-            text += f"\n今日全部完成! 额外+{extra}金币"
+            text += f"\n今日全部完成! 额外+{extra}喵币"
         if has_cat:
             text += f"\n\n[{cat_data['name']}] 在等你回来哦~"
         else:
@@ -1306,8 +1337,8 @@ class Main(BaseModule):
 
         url = await self._fetch_image("happy")
         msgs = [
-            f"[{cat_data['name']}] 在路边捡到了【{item_name}】!\n卖了 {coins} 金币~",
-            f"[{cat_data['name']}] 叼回了【{item_name}】!\n换了 {coins} 金币!",
+            f"[{cat_data['name']}] 在路边捡到了【{item_name}】!\n卖了 {coins} 喵币~",
+            f"[{cat_data['name']}] 叼回了【{item_name}】!\n换了 {coins} 喵币!",
         ]
         await self._send_reply(
             event, random.choice(msgs), image_url=url, card_type="success"
@@ -1354,8 +1385,8 @@ class Main(BaseModule):
 
         url = await self._fetch_image("happy")
         msgs = [
-            f"[{cat_data['name']}] 捉到了【{bug_name}】!\n卖了 {coins} 金币~",
-            f"[{cat_data['name']}] 扑腾半天抓到【{bug_name}】!\n赚了 {coins} 金币!",
+            f"[{cat_data['name']}] 捉到了【{bug_name}】!\n卖了 {coins} 喵币~",
+            f"[{cat_data['name']}] 扑腾半天抓到【{bug_name}】!\n赚了 {coins} 喵币!",
         ]
         await self._send_reply(
             event, random.choice(msgs), image_url=url, card_type="success"
@@ -1368,7 +1399,7 @@ class Main(BaseModule):
             coins = self._get_coins(user_id)
             bag_text = self._build_bag_display(user_id, coins)
 
-            actions = "\n1.使用道具  2.前往商城  3.查看增益  4.查看头衔\n0. 返回"
+            actions = "\n1.使用道具  2.前往商城  3.查看增益\n4.查看头衔\n0. 返回"
             full = f"{bag_text}{actions}"
             await self._send_reply(event, full)
 
@@ -1390,7 +1421,7 @@ class Main(BaseModule):
                 return
             coins = self._get_coins(user_id)
             shop_text = self._build_shop_display(coins)
-            shop_text += "\n输入编号购买 | 0 返回"
+            shop_text += "\n输入编号购买 | 0. 返回"
             await self._send_reply(event, shop_text)
 
             choice = await self._wait_choice(
@@ -1428,13 +1459,13 @@ class Main(BaseModule):
             await self._send_reply(event, "背包空空如也~去商城逛逛吧!")
             return
 
-        lines = [f"使用道具  金币:{coins}\n"]
+        lines = [f"使用道具  喵币:{coins}\n"]
         for idx, name, count, item in available:
             lines.append(f"{idx}. {name}  x{count}  {item['desc']}")
         if has_tools:
             lines.append("\n--- 作案工具 (用于抢劫) ---")
             lines.extend(tool_lines)
-        lines.append("\n输入编号使用 | 0 返回")
+        lines.append("\n输入编号使用 | 0. 返回")
         await self._send_reply(event, "\n".join(lines))
 
         max_display = max(display_indices) if display_indices else 0
@@ -1645,7 +1676,7 @@ class Main(BaseModule):
             if coins < RESCUE_COST:
                 await self._send_reply(
                     event,
-                    f"急救需要 {RESCUE_COST} 金币，你只有 {coins} 枚\n"
+                    f"急救需要 {RESCUE_COST} 喵币，你只有 {coins} 枚\n"
                     f"去商城购买急救包或打工赚钱吧!",
                     card_type="danger",
                 )
@@ -1657,7 +1688,7 @@ class Main(BaseModule):
             cost_text = "使用急救包"
         else:
             self._add_coins(user_id, -RESCUE_COST)
-            cost_text = f"花费 {RESCUE_COST} 金币"
+            cost_text = f"花费 {RESCUE_COST} 喵币"
 
         now = time.time()
         if random.random() < 0.5:
@@ -1745,7 +1776,7 @@ class Main(BaseModule):
             if job in HIDDEN_JOBS:
                 tag = " [隐藏]"
             lines.append(
-                f"{i}. {job['name']}{tag} ({job['earn_min']}-{job['earn_max']}金币)"
+                f"{i}. {job['name']}{tag} ({job['earn_min']}-{job['earn_max']}喵币)"
             )
         lines.append("\n输入编号打工 | 0 返回")
         await self._send_reply(event, "\n".join(lines))
@@ -1798,7 +1829,7 @@ class Main(BaseModule):
             url = await self._fetch_image("cry")
             msg = (
                 f"[{cat_data['name']}] 在{job['name']}途中因过度劳累倒下了...\n"
-                f"它带着赚到的 {earnings} 金币，永远地去了喵星。\n"
+                f"它带着赚到的 {earnings} 喵币，永远地去了喵星。\n"
                 f"获得头衔【{DEATH_TITLES['overwork']}】"
             )
             await self._send_reply(event, msg, image_url=url, card_type="death")
@@ -1812,9 +1843,9 @@ class Main(BaseModule):
 
         url = await self._fetch_image("happy")
         msgs = [
-            f"[{cat_data['name']}] {job['name']}回来啦! 赚了 {earnings} 金币~",
-            f"{job['name']}完成! +{earnings} 金币!",
-            f"辛苦{job['name']}! {earnings} 金币入袋!",
+            f"[{cat_data['name']}] {job['name']}回来啦! 赚了 {earnings} 喵币~",
+            f"{job['name']}完成! +{earnings} 喵币!",
+            f"辛苦{job['name']}! {earnings} 喵币入袋!",
         ]
         await self._send_reply(
             event, random.choice(msgs), image_url=url, card_type="success"
@@ -1904,7 +1935,7 @@ class Main(BaseModule):
             if died:
                 url = await self._fetch_image("cry")
                 msg = (
-                    f"成功抓到 [{target_cat['name']}]! 赚了 {earnings} 金币!\n"
+                    f"成功抓到 [{target_cat['name']}]! 赚了 {earnings} 喵币!\n"
                     f"但 [{cat_data['name']}] 因体力不支倒下了...\n"
                     f"获得头衔【{DEATH_TITLES['overwork']}】"
                 )
@@ -1913,8 +1944,8 @@ class Main(BaseModule):
 
             url = await self._fetch_image("neko")
             msgs = [
-                f"成功抓到 [{target_cat['name']}] 打工! +{earnings} 金币!",
-                f"[{target_cat['name']}] 被抓去打工啦! 收获 {earnings} 金币!",
+                f"成功抓到 [{target_cat['name']}] 打工! +{earnings} 喵币!",
+                f"[{target_cat['name']}] 被抓去打工啦! 收获 {earnings} 喵币!",
             ]
             await self._send_reply(
                 event, random.choice(msgs), image_url=url, card_type="success"
@@ -2033,7 +2064,7 @@ class Main(BaseModule):
             await self._send_reply(
                 event,
                 f"打劫[{target}]时被猫警抓住了!\n"
-                f"罚款 {actual_fine} 金币，声望-5\n"
+                f"罚款 {actual_fine} 喵币，声望-5\n"
                 f"(学历越高罚款越重哦~)",
                 image_url=url,
                 card_type="danger",
@@ -2048,8 +2079,8 @@ class Main(BaseModule):
 
             url = await self._fetch_image("neko")
             msgs = [
-                f"成功打劫了[{target}]! 抢到 {loot} 金币!",
-                f"从[{target}]身上摸到了 {loot} 金币!",
+                f"成功打劫了[{target}]! 抢到 {loot} 喵币!",
+                f"从[{target}]身上摸到了 {loot} 喵币!",
             ]
             await self._send_reply(
                 event, random.choice(msgs), image_url=url, card_type="success"
@@ -2062,8 +2093,8 @@ class Main(BaseModule):
 
             url = await self._fetch_image("cry")
             msgs = [
-                f"[{target}] 太机灵了! 打劫失败，倒赔 {actual_penalty} 金币~",
-                f"被[{target}]揍了一顿! 损失 {actual_penalty} 金币!",
+                f"[{target}] 太机灵了! 打劫失败，倒赔 {actual_penalty} 喵币~",
+                f"被[{target}]揍了一顿! 损失 {actual_penalty} 喵币!",
             ]
             await self._send_reply(
                 event, random.choice(msgs), image_url=url, card_type="danger"
@@ -2117,7 +2148,7 @@ class Main(BaseModule):
             await self._send_reply(
                 event,
                 f"打劫[{target_name}]时被猫警巡逻队抓住了!\n"
-                f"罚款 {actual_fine} 金币，声望-10",
+                f"罚款 {actual_fine} 喵币，声望-10",
                 image_url=url,
                 card_type="danger",
             )
@@ -2142,7 +2173,7 @@ class Main(BaseModule):
 
                 url = await self._fetch_image("cry")
                 msg = (
-                    f"打劫成功! 抢了 {stolen} 金币!\n"
+                    f"打劫成功! 抢了 {stolen} 喵币!\n"
                     f"但 [{cat_data['name']}] 在逃跑途中累倒了...\n"
                     f"获得头衔【{DEATH_TITLES['overwork']}】"
                 )
@@ -2152,8 +2183,8 @@ class Main(BaseModule):
             self.sdk.storage.set(f"nekocare:{user_id}", cat_data)
             url = await self._fetch_image("neko")
             msgs = [
-                f"打劫成功! 抢了 {stolen} 金币! (声望下降...)",
-                f"[{cat_data['name']}] 成功打劫! +{stolen} 金币!",
+                f"打劫成功! 抢了 {stolen} 喵币! (声望下降...)",
+                f"[{cat_data['name']}] 成功打劫! +{stolen} 喵币!",
             ]
             await self._send_reply(
                 event, random.choice(msgs), image_url=url, card_type="success"
@@ -2167,8 +2198,8 @@ class Main(BaseModule):
             url = await self._fetch_image("cry")
             target_name = target_cat["name"] if target_cat else "对方猫猫"
             msgs = [
-                f"打劫失败! 被[{target_name}] 发现了，赔偿 {actual_penalty} 金币!",
-                f"[{cat_data['name']}] 打劫扑空了，倒赔 {actual_penalty} 金币!",
+                f"打劫失败! 被[{target_name}] 发现了，赔偿 {actual_penalty} 喵币!",
+                f"[{cat_data['name']}] 打劫扑空了，倒赔 {actual_penalty} 喵币!",
             ]
             await self._send_reply(
                 event, random.choice(msgs), image_url=url, card_type="danger"
@@ -2181,13 +2212,13 @@ class Main(BaseModule):
             coins = self._get_coins(user_id)
             inv = self._get_inventory(user_id)
 
-            lines = [f"黑市  金币:{coins}\n"]
+            lines = [f"黑市  喵币:{coins}\n"]
             lines.append("--- 购买 ---")
             for i, name in enumerate(BLACKMARKET_ITEM_LIST, 1):
                 item = BLACKMARKET_ITEMS[name]
                 count = inv.get(name, 0)
                 lines.append(
-                    f"{i}. {name} {item['price']}金币 (持有:{count}) {item['desc']}"
+                    f"{i}. {name} {item['price']}喵币 (持有:{count}) {item['desc']}"
                 )
             lines.append("\n输入编号购买 | 0 返回")
             await self._send_reply(event, "\n".join(lines))
@@ -2206,7 +2237,7 @@ class Main(BaseModule):
             if coins < item["price"]:
                 await self._send_reply(
                     event,
-                    f"金币不足! 需要 {item['price']}，你只有 {coins}",
+                    f"喵币不足! 需要 {item['price']}，你只有 {coins}",
                     card_type="danger",
                 )
                 continue
@@ -2291,7 +2322,7 @@ class Main(BaseModule):
                         cd_text = f" (冷却{int(cd_left // 3600)}时{int((cd_left % 3600) // 60)}分)"
                     else:
                         cd_text = f" (冷却{int(cd_left // 60) + 1}分)"
-                status = "✓" if req_met else "✗缺工具"
+                status = "✔" if req_met else "✘缺工具"
                 lines.append(
                     f"{i}. {tname} [{status}]{cd_text}"
                     f" 收益:{target['loot_min']}-{target['loot_max']}"
@@ -2419,7 +2450,7 @@ class Main(BaseModule):
                 await self._send_reply(
                     event,
                     f"抢劫{tname}时被猫警抓住了!\n"
-                    f"罚款 {actual_fine} 金币，声望大幅下降\n"
+                    f"罚款 {actual_fine} 喵币，声望大幅下降\n"
                     f"消耗工具: {', '.join(consumed_tools)}",
                     image_url=url,
                     card_type="danger",
@@ -2437,8 +2468,8 @@ class Main(BaseModule):
 
                 url = await self._fetch_image("neko")
                 msgs = [
-                    f"成功抢劫{tname}! 抢到 {loot} 金币!",
-                    f"[{cat_data['name']}] 从 {tname} 弄到了 {loot} 金币!",
+                    f"成功抢劫{tname}! 抢到 {loot} 喵币!",
+                    f"[{cat_data['name']}] 从 {tname} 弄到了 {loot} 喵币!",
                 ]
                 await self._send_reply(
                     event,
@@ -2457,8 +2488,8 @@ class Main(BaseModule):
 
                 url = await self._fetch_image("cry")
                 msgs = [
-                    f"抢劫{tname}失败! 被保安发现了，赔偿 {actual_penalty} 金币!",
-                    f"[{cat_data['name']}] 在 {tname} 扑了个空，倒赔 {actual_penalty} 金币!",
+                    f"抢劫{tname}失败! 被保安发现了，赔偿 {actual_penalty} 喵币!",
+                    f"[{cat_data['name']}] 在 {tname} 扑了个空，倒赔 {actual_penalty} 喵币!",
                 ]
                 await self._send_reply(
                     event,
@@ -2496,7 +2527,7 @@ class Main(BaseModule):
         menu = (
             f"学习深造\n\n"
             f"当前学历: {edu_name}\n"
-            f"目标: {next_info['name']} (学费:{next_info['cost']}金币)\n"
+            f"目标: {next_info['name']} (学费:{next_info['cost']}喵币)\n"
             f"学习进度: [{bar}] {progress}%\n"
             f"智力: {attrs['int']}\n\n"
             f"1. 认真学习 (进度+25 智力+1~3)\n"
@@ -2528,7 +2559,7 @@ class Main(BaseModule):
                 await self._send_reply(
                     event,
                     f"认真学习了! 进度 [{bar}] {progress}% 智力+{int_gain}\n"
-                    f"!! 学费不足，还需要 {next_info['cost']} 金币才能毕业 !!\n"
+                    f"!! 学费不足，还需要 {next_info['cost']} 喵币才能毕业 !!\n"
                     f"凑够学费后再来学习，无需等待冷却~",
                     card_type="warning",
                 )
@@ -2569,7 +2600,7 @@ class Main(BaseModule):
                 await self._send_reply(
                     event,
                     f"正常学习完成! 进度 [{bar}] {progress}%\n"
-                    f"!! 学费不足，还需要 {next_info['cost']} 金币才能毕业 !!\n"
+                    f"!! 学费不足，还需要 {next_info['cost']} 喵币才能毕业 !!\n"
                     f"凑够学费后再来学习~",
                     card_type="warning",
                 )
@@ -2606,7 +2637,7 @@ class Main(BaseModule):
                 await self._send_reply(
                     event,
                     f"摸鱼了一节课... 进度 [{bar}] {progress}% 魅力+{cha_gain}\n"
-                    f"!! 学费不足，还需要 {next_info['cost']} 金币才能毕业 !!\n"
+                    f"!! 学费不足，还需要 {next_info['cost']} 喵币才能毕业 !!\n"
                     f"凑够学费后再来学习~",
                     card_type="warning",
                 )
@@ -2667,15 +2698,15 @@ class Main(BaseModule):
                 remain = max(0, BANK_FIXED_TERM - elapsed)
                 h = int(remain // 3600)
                 m = int((remain % 3600) // 60)
-                fd_info = f"\n定期存款: {fd['amount']} 金币 (含利息{fd['interest']}) 剩余{h}时{m}分"
+                fd_info = f"\n定期存款: {fd['amount']} 喵币 (含利息{fd['interest']}) 剩余{h}时{m}分"
 
             menu = (
                 f"喵喵银行\n\n"
-                f"活期存款: {bank['deposit']} 金币\n"
-                f"钱包: {coins} 金币\n"
-                f"贷款: {loan['amount']} 金币 (利率{loan_rate:.1f}%/24h)\n"
+                f"活期存款: {bank['deposit']} 喵币\n"
+                f"钱包: {coins} 喵币\n"
+                f"贷款: {loan['amount']} 喵币 (利率{loan_rate:.1f}%/24h)\n"
                 f"活期利率: {BANK_INTEREST_REGULAR * 100}% | 定期利率: {BANK_INTEREST_FIXED * 100}%\n"
-                f"最大贷款: {max_loan} 金币{fd_info}\n\n"
+                f"最大贷款: {max_loan} 喵币{fd_info}\n\n"
                 f"1. 活期存款/取款\n"
                 f"2. 定期存款\n"
                 f"3. 贷款/还款\n"
@@ -2726,7 +2757,7 @@ class Main(BaseModule):
 
         await self._send_reply(
             event,
-            f"当前存款: {bank['deposit']} | 钱包: {coins} 金币\n最高存款: {BANK_MAX_DEPOSIT}\n请输入存款金额:",
+            f"当前存款: {bank['deposit']} | 钱包: {coins} 喵币\n最高存款: {BANK_MAX_DEPOSIT}\n请输入存款金额:",
         )
 
         amount = await self._wait_choice(event, expect="int", min_val=1)
@@ -2735,14 +2766,14 @@ class Main(BaseModule):
 
         coins = self._get_coins(user_id)
         if amount > coins:
-            await self._send_reply(event, f"钱包只有 {coins} 金币!")
+            await self._send_reply(event, f"钱包只有 {coins} 喵币!")
             return
 
         bank = self._get_bank(user_id)
         new_deposit = bank["deposit"] + amount
         if new_deposit > BANK_MAX_DEPOSIT:
             max_allowed = BANK_MAX_DEPOSIT - bank["deposit"]
-            await self._send_reply(event, f"将超出上限，最多还能存 {max_allowed} 金币")
+            await self._send_reply(event, f"将超出上限，最多还能存 {max_allowed} 喵币")
             return
 
         self._add_coins(user_id, -amount)
@@ -2754,7 +2785,7 @@ class Main(BaseModule):
         url = await self._fetch_image("happy")
         await self._send_reply(
             event,
-            f"成功存入 {amount} 金币! 当前存款: {bank['deposit']}",
+            f"成功存入 {amount} 喵币! 当前存款: {bank['deposit']}",
             image_url=url,
             card_type="success",
         )
@@ -2765,7 +2796,7 @@ class Main(BaseModule):
 
         await self._send_reply(
             event,
-            f"当前存款: {bank['deposit']} | 钱包: {coins} 金币\n请输入取款金额:",
+            f"当前存款: {bank['deposit']} | 钱包: {coins} 喵币\n请输入取款金额:",
         )
 
         amount = await self._wait_choice(event, expect="int", min_val=1)
@@ -2774,7 +2805,7 @@ class Main(BaseModule):
 
         bank = self._get_bank(user_id)
         if amount > bank["deposit"]:
-            await self._send_reply(event, f"存款只有 {bank['deposit']} 金币!")
+            await self._send_reply(event, f"存款只有 {bank['deposit']} 喵币!")
             return
 
         bank["deposit"] -= amount
@@ -2786,7 +2817,7 @@ class Main(BaseModule):
         url = await self._fetch_image("happy")
         await self._send_reply(
             event,
-            f"成功取出 {amount} 金币! 当前存款: {bank['deposit']}",
+            f"成功取出 {amount} 喵币! 当前存款: {bank['deposit']}",
             image_url=url,
             card_type="success",
         )
@@ -2804,7 +2835,7 @@ class Main(BaseModule):
                 url = await self._fetch_image("happy")
                 await self._send_reply(
                     event,
-                    f"定期存款到期! 本金 {fd_calc['amount']} + 利息 {fd_calc['interest']} = {total} 金币已到账!",
+                    f"定期存款到期! 本金 {fd_calc['amount']} + 利息 {fd_calc['interest']} = {total} 喵币已到账!",
                     image_url=url,
                     card_type="success",
                 )
@@ -2814,8 +2845,8 @@ class Main(BaseModule):
                 penalty = int(fd["amount"] * BANK_FIXED_PENALTY)
                 await self._send_reply(
                     event,
-                    f"定期存款: {fd['amount']} 金币 (还需{h}时{m}分到期)\n"
-                    f"提前取出将损失 {penalty} 金币 ({int(BANK_FIXED_PENALTY * 100)}%违约金)\n\n"
+                    f"定期存款: {fd['amount']} 喵币 (还需{h}时{m}分到期)\n"
+                    f"提前取出将损失 {penalty} 喵币 ({int(BANK_FIXED_PENALTY * 100)}%违约金)\n\n"
                     f"1. 提前取出\n"
                     f"0. 返回",
                 )
@@ -2828,7 +2859,7 @@ class Main(BaseModule):
                     self._add_coins(user_id, max(0, recv))
                     self._set_fixed_deposit(user_id, {"amount": 0, "start_time": 0.0})
                     await self._send_reply(
-                        event, f"提前取出! 扣除违约金后获得 {max(0, recv)} 金币"
+                        event, f"提前取出! 扣除违约金后获得 {max(0, recv)} 喵币"
                     )
             return
 
@@ -2836,10 +2867,10 @@ class Main(BaseModule):
         await self._send_reply(
             event,
             f"定期存款\n\n"
-            f"钱包: {coins} 金币\n"
+            f"钱包: {coins} 喵币\n"
             f"定期利率: {BANK_INTEREST_FIXED * 100}% / 24小时\n"
             f"期限: 24小时 | 提前取出违约金 {int(BANK_FIXED_PENALTY * 100)}%\n\n"
-            f"请输入存入金额 (0 返回):",
+            f"请输入存入金额 | 0. 返回):",
         )
 
         amount = await self._wait_choice(event, expect="int", min_val=0)
@@ -2848,7 +2879,7 @@ class Main(BaseModule):
 
         coins = self._get_coins(user_id)
         if amount > coins:
-            await self._send_reply(event, f"金币不足! 只有 {coins}", card_type="danger")
+            await self._send_reply(event, f"喵币不足! 只有 {coins}", card_type="danger")
             return
 
         self._add_coins(user_id, -amount)
@@ -2856,7 +2887,7 @@ class Main(BaseModule):
         url = await self._fetch_image("happy")
         await self._send_reply(
             event,
-            f"存入定期 {amount} 金币! 24小时后到期~",
+            f"存入定期 {amount} 喵币! 24小时后到期~",
             image_url=url,
             card_type="success",
         )
@@ -2866,7 +2897,7 @@ class Main(BaseModule):
         loan = self._calc_loan_interest(user_id)
         if loan["amount"] > 0:
             await self._send_reply(
-                event, f"你还有 {loan['amount']} 金币贷款未还! 先还清再借~"
+                event, f"你还有 {loan['amount']} 喵币贷款未还! 先还清再借~"
             )
             return
 
@@ -2882,10 +2913,10 @@ class Main(BaseModule):
         await self._send_reply(
             event,
             f"贷款\n\n"
-            f"最大可借: {max_loan} 金币\n"
+            f"最大可借: {max_loan} 喵币\n"
             f"利率: {loan_rate:.1f}% / 24小时 (声望越高利率越低)\n"
             f"你的声望: {attrs['rep']}\n\n"
-            f"请输入借款金额 (0 返回):",
+            f"请输入借款金额 | 0. 返回):",
         )
 
         amount = await self._wait_choice(
@@ -2902,7 +2933,7 @@ class Main(BaseModule):
         url = await self._fetch_image("happy")
         await self._send_reply(
             event,
-            f"成功贷款 {amount} 金币! 记得按时还款~",
+            f"成功贷款 {amount} 喵币! 记得按时还款~",
             image_url=url,
             card_type="success",
         )
@@ -2917,8 +2948,8 @@ class Main(BaseModule):
         await self._send_reply(
             event,
             f"还款\n\n"
-            f"贷款余额: {loan['amount']} 金币\n"
-            f"你的金币: {coins}\n\n"
+            f"贷款余额: {loan['amount']} 喵币\n"
+            f"你的喵币: {coins}\n\n"
             f"1. 全部还清\n"
             f"2. 部分还款\n"
             f"0. 返回",
@@ -2945,7 +2976,7 @@ class Main(BaseModule):
             )
             self._mod_attr(user_id, "rep", 3)
             await self._send_reply(
-                event, f"成功还款 {repay} 金币! 声望+3", card_type="success"
+                event, f"成功还款 {repay} 喵币! 声望+3", card_type="success"
             )
         elif choice == "2":
             await self._send_reply(event, "请输入还款金额:")
@@ -2968,7 +2999,7 @@ class Main(BaseModule):
             )
             await self._send_reply(
                 event,
-                f"成功还款 {amount} 金币! 剩余 {new_amount}",
+                f"成功还款 {amount} 喵币! 剩余 {new_amount}",
                 card_type="success",
             )
 
@@ -2976,7 +3007,7 @@ class Main(BaseModule):
         coins = self._get_coins(user_id)
         await self._send_reply(
             event,
-            f"转账\n\n你的金币: {coins}\n请输入转账目标 (@对方):",
+            f"转账\n\n你的喵币: {coins}\n请输入转账目标 (@对方):",
         )
 
         target_str = await self._wait_choice(event)
@@ -2994,14 +3025,14 @@ class Main(BaseModule):
 
         coins = self._get_coins(user_id)
         if amount > coins:
-            await self._send_reply(event, f"金币不足! 只有 {coins}", card_type="danger")
+            await self._send_reply(event, f"喵币不足! 只有 {coins}", card_type="danger")
             return
 
         self._add_coins(user_id, -amount)
         self._add_coins(target_id, amount)
         self._mod_attr(user_id, "rep", 2)
         await self._send_reply(
-            event, f"成功转账 {amount} 金币! 声望+2", card_type="success"
+            event, f"成功转账 {amount} 喵币! 声望+2", card_type="success"
         )
 
     async def _handle_stocks(self, event, user_id):
@@ -3013,7 +3044,7 @@ class Main(BaseModule):
             user_stocks = self._get_user_stocks(user_id)
             coins = self._get_coins(user_id)
 
-            lines = [f"股票市场  钱包:{coins}金币\n"]
+            lines = [f"股票市场  钱包:{coins}喵币\n"]
             for i, name in enumerate(STOCK_LIST, 1):
                 held = user_stocks.get(name, 0)
                 price = prices[name]
@@ -3059,7 +3090,7 @@ class Main(BaseModule):
         if total_cost > coins:
             await self._send_reply(
                 event,
-                f"金币不足! 需要 {total_cost}，你只有 {coins}",
+                f"喵币不足! 需要 {total_cost}，你只有 {coins}",
                 card_type="danger",
             )
             return
@@ -3070,7 +3101,7 @@ class Main(BaseModule):
         self._set_user_stocks(user_id, user_stocks)
 
         await self._send_reply(
-            event, f"买入 {stock_name} x{qty}! 花费 {total_cost} 金币"
+            event, f"买入 {stock_name} x{qty}! 花费 {total_cost} 喵币"
         )
 
     async def _handle_sell_stock(self, event, user_id, prices):
@@ -3127,7 +3158,7 @@ class Main(BaseModule):
         else:
             profit_text = ""
         await self._send_reply(
-            event, f"卖出 {stock_name} x{qty}! 获得 {revenue} 金币{profit_text}"
+            event, f"卖出 {stock_name} x{qty}! 获得 {revenue} 喵币{profit_text}"
         )
 
     async def _handle_invest(self, event, user_id):
@@ -3136,12 +3167,12 @@ class Main(BaseModule):
         lines = ["理财投资\n"]
         for i, inv in enumerate(INVESTMENTS, 1):
             lines.append(
-                f"{i}. {inv['name']}  投入:{inv['cost']}金币  "
+                f"{i}. {inv['name']}  投入:{inv['cost']}喵币  "
                 f"收益:{inv['profit_min']}-{inv['profit_max']}  "
                 f"失败率:{int(inv['fail_rate'] * 100)}%"
             )
-        lines.append(f"\n你的金币: {coins}")
-        lines.append("\n输入编号投资 | 0 返回")
+        lines.append(f"\n你的喵币: {coins}")
+        lines.append("\n输入编号投资 | 0. 返回")
         await self._send_reply(event, "\n".join(lines))
 
         choice = await self._wait_choice(
@@ -3158,7 +3189,7 @@ class Main(BaseModule):
         if coins < inv["cost"]:
             await self._send_reply(
                 event,
-                f"金币不足! 需要 {inv['cost']}，你只有 {coins}",
+                f"喵币不足! 需要 {inv['cost']}，你只有 {coins}",
                 card_type="danger",
             )
             return
@@ -3171,7 +3202,7 @@ class Main(BaseModule):
             url = await self._fetch_image("cry")
             await self._send_reply(
                 event,
-                f"{inv['name']}失败... 投入的 {inv['cost']} 金币打了水漂!",
+                f"{inv['name']}失败... 投入的 {inv['cost']} 喵币打了水漂!",
                 image_url=url,
                 card_type="danger",
             )
@@ -3183,7 +3214,7 @@ class Main(BaseModule):
             url = await self._fetch_image("happy")
             await self._send_reply(
                 event,
-                f"{inv['name']}成功! 投入 {inv['cost']}，回报 {inv['cost'] + profit} 金币! (净赚 {profit})",
+                f"{inv['name']}成功! 投入 {inv['cost']}，回报 {inv['cost'] + profit} 喵币! (净赚 {profit})",
                 image_url=url,
                 card_type="success",
             )
@@ -3193,7 +3224,7 @@ class Main(BaseModule):
         menu = (
             f"寄养 [{cat_data['name']}]\n\n"
             f"寄养期间猫猫不会饿肚子\n"
-            f"费用: {FOSTER_COST_PER_DAY}金币/天 (接回时结算)\n"
+            f"费用: {FOSTER_COST_PER_DAY}喵币/天 (接回时结算)\n"
             f"最多寄养 {FOSTER_MAX_DAYS} 天\n\n"
             f"1. 确认寄养\n"
             f"0. 取消"
@@ -3229,8 +3260,8 @@ class Main(BaseModule):
         menu = (
             f"接 [{cat_data['name']}] 回家\n\n"
             f"寄养天数: {foster_days} 天\n"
-            f"寄养费用: {cost} 金币\n"
-            f"你的金币: {coins} 枚\n\n"
+            f"寄养费用: {cost} 喵币\n"
+            f"你的喵币: {coins} 枚\n\n"
             f"1. 确认接回\n"
             f"0. 取消"
         )
@@ -3244,7 +3275,7 @@ class Main(BaseModule):
         if coins < cost:
             await self._send_reply(
                 event,
-                f"金币不足! 需要 {cost} 枚，你只有 {coins} 枚",
+                f"喵币不足! 需要 {cost} 枚，你只有 {coins} 枚",
                 card_type="danger",
             )
             return
@@ -3261,7 +3292,7 @@ class Main(BaseModule):
         url = await self._fetch_image("happy")
         await self._send_reply(
             event,
-            f"[{cat_data['name']}] 回家啦! 花了 {cost} 金币寄养费~",
+            f"[{cat_data['name']}] 回家啦! 花了 {cost} 喵币寄养费~",
             image_url=url,
             card_type="success",
         )
@@ -3295,7 +3326,7 @@ class Main(BaseModule):
             f"领养天数: {adopt_days} 天",
             f"饱食度: {fl}  亲密度: {il}",
             f"学历: {EDU_LEVELS[self._get_edu(user_id)]['name']}",
-            f"金币: {coins} 枚",
+            f"喵币: {coins} 枚",
             f"存款: {self._get_bank(user_id)['deposit']} 枚",
         ]
 
@@ -3355,7 +3386,7 @@ class Main(BaseModule):
             f"你把 [{cat_data['name']}] 送走了...\n"
             f"猫猫回头看了你一眼，眼中满是不解。\n"
             f"获得头衔【{ABANDON_TITLE}】\n"
-            f"弃养惩罚: 扣除大量金币、学历清零、属性重置"
+            f"弃养惩罚: 扣除大量喵币、学历清零、属性重置"
         )
         await self._send_reply(event, msg, image_url=url)
         return True
@@ -3452,7 +3483,7 @@ class Main(BaseModule):
         if coins < item["price"]:
             await self._send_reply(
                 event,
-                f"金币不足! 【{item_name}】{item['price']}金币，你只有 {coins} 枚",
+                f"喵币不足! 【{item_name}】{item['price']}喵币，你只有 {coins} 枚",
                 card_type="danger",
             )
             return
@@ -3572,7 +3603,7 @@ class Main(BaseModule):
         msg = (
             f"!! [{cat_data['name']}] 饿晕了，被送往宠物医院 !!\n\n"
             f"请 {hours} 小时内使用急救!\n"
-            f"急救费用: {RESCUE_COST} 金币 (50%成功率)"
+            f"急救费用: {RESCUE_COST} 喵币 (50%成功率)"
         )
         await self._send_reply(event, msg, image_url=url, card_type="danger")
 
@@ -3831,7 +3862,7 @@ class Main(BaseModule):
 
     def _get_buff_label(self, buff_name: str) -> Optional[str]:
         labels = {
-            "work_double": "金币加成卡",
+            "work_double": "聚宝喵符",
             "catch_boost": "幸运铃铛",
             "free_rescue": "急救包",
         }
@@ -3882,44 +3913,44 @@ class Main(BaseModule):
         cat_data = self._get_cat(user_id)
 
         if stats.get("work_count", 0) >= 50:
-            self._add_title(user_id, "打工狂魔")
+            self._add_title(user_id, "⚒️ - 打工狂魔")
         if stats.get("work_count", 0) >= 100:
-            self._add_title(user_id, "佛系玩家")
+            self._add_title(user_id, "🧘 - 佛系玩家")
         if stats.get("catch_count", 0) >= 20:
-            self._add_title(user_id, "捕猫达人")
+            self._add_title(user_id, "🐱 - 捕猫达人")
         if stats.get("catch_count", 0) >= 50:
-            self._add_title(user_id, "驭猫达人")
+        self._add_title(user_id, "🐾 - 驭猫达人")
         if stats.get("rescue_count", 0) >= 5:
-            self._add_title(user_id, "神医再世")
+            self._add_title(user_id, "🩺 - 神医再世")
         if stats.get("rescue_count", 0) >= 15:
-            self._add_title(user_id, "欧皇附体")
+            self._add_title(user_id, "🌟 - 欧皇附体")
         if stats.get("death_count", 0) >= 3:
-            self._add_title(user_id, "非酋酋长")
+            self._add_title(user_id, "🎭 - 非酋酋长")
         if coins >= 1000:
-            self._add_title(user_id, "富可敌国")
+            self._add_title(user_id, "💰 - 富可敌国")
         if coins >= 5000:
-            self._add_title(user_id, "清丽多金")
+            self._add_title(user_id, "💎 - 清丽多金")
         if coins <= 0:
             loan = self._get_loan(user_id)
             if loan["amount"] > 0:
-                self._add_title(user_id, "负债累累")
+                self._add_title(user_id, "⛔ - 负债累累")
             else:
-                self._add_title(user_id, "千金散尽")
+                self._add_title(user_id, "💸 - 千金散尽")
         total_lost = stats.get("invest_lost", 0)
         if total_lost >= 500:
-            self._add_title(user_id, "散尽家财")
+            self._add_title(user_id, "📉 - 散尽家财")
         invest_profit = stats.get("invest_profit", 0)
         if invest_profit >= 500:
-            self._add_title(user_id, "理财圣手")
+            self._add_title(user_id, "📈 - 理财圣手")
         if invest_profit >= 2000:
-            self._add_title(user_id, "止盈大师")
+            self._add_title(user_id, "🛑 - 止盈大师")
         if invest_profit >= 5000:
-            self._add_title(user_id, "富贵险求")
+            self._add_title(user_id, "🎲 - 富贵险求")
         invest_total = stats.get("invest_count", 0)
         if invest_total >= 10:
-            self._add_title(user_id, "果断梭哈")
+            self._add_title(user_id, "🚀 - 果断梭哈")
         if invest_total >= 30:
-            self._add_title(user_id, "佛系玩家")
+            self._add_title(user_id, "🧘 - 佛系玩家")
 
         if cat_data and cat_data.get("status") == "alive":
             from datetime import datetime, timezone
@@ -3928,23 +3959,24 @@ class Main(BaseModule):
             now_dt = datetime.now(tz=timezone.utc)
             days = max(1, (now_dt.date() - adopt_dt.date()).days + 1)
             if days >= 30:
-                self._add_title(user_id, "好主人")
+                self._add_title(user_id, "❤️ - 好主人")
             if cat_data.get("intimacy", 0) >= 90:
-                self._add_title(user_id, "萌系可爱")
+                self._add_title(user_id, "🌸 - 萌系可爱")
             if cat_data.get("intimacy", 0) >= 100 and days >= 7:
-                self._add_title(user_id, "软萌可爱")
+                self._add_title(user_id, "🍡 - 软萌可爱")
             if cat_data.get("intimacy", 0) >= 100 and days >= 14:
-                self._add_title(user_id, "软萌喵系")
+                self._add_title(user_id, "🐱 - 软萌喵系")
             if cat_data.get("intimacy", 0) >= 100 and days >= 30:
-                self._add_title(user_id, "萌态万千")
+                self._add_title(user_id, "🌟 - 萌态万千")
             if cat_data.get("intimacy", 0) >= 100 and days >= 60:
-                self._add_title(user_id, "人间可爱")
+                self._add_title(user_id, "🌙 - 人间可爱")
             if cat_data.get("intimacy", 0) >= 100 and coins >= 10000:
-                self._add_title(user_id, "盛世美颜")
+                self._add_title(user_id, "✨ - 盛世美颜")
             attrs = self._get_attrs(user_id)
             if attrs["cha"] >= 80 and attrs["int"] >= 60 and coins >= 5000:
-                self._add_title(user_id, "俊朗多金")
-                self._add_title(user_id, "好主人")
+                self._add_title(user_id, "💼 - 俊朗多金")
+                self._add_title(user_id, "❤️ - 好主人")
+
 
     # =============================================================
     #  显示工具
@@ -3965,22 +3997,22 @@ class Main(BaseModule):
     def _get_stat_style(self, stat_type: str, value: int) -> Tuple[str, str]:
         if stat_type == "fullness":
             if value >= 80:
-                label, color = "很饱", "#4caf50"
+                label, color = "很饱", "#4CAF50"
             elif value >= 50:
-                label, color = "还行", "#ff9800"
+                label, color = "还行", "#FF9800"
             elif value >= 20:
-                label, color = "有点饿", "#ff5722"
+                label, color = "有点饿", "#FF5722"
             else:
-                label, color = "非常饿", "#f44336"
+                label, color = "非常饿", "#F44336"
         else:
             if value >= 80:
-                label, color = "非常亲密", "#e91e63"
+                label, color = "非常亲密", "#E91E63"
             elif value >= 50:
-                label, color = "友好", "#9c27b0"
+                label, color = "友好", "#9C27B0"
             elif value >= 20:
-                label, color = "普通", "#607d8b"
+                label, color = "普通", "#607D8B"
             else:
-                label, color = "陌生", "#9e9e9e"
+                label, color = "陌生", "#9E9E9E"
         return f"{value}/100 [{label}]", color
 
     def _build_bag_display(self, user_id: str, coins: int) -> str:
@@ -3988,7 +4020,7 @@ class Main(BaseModule):
         all_items = list(SHOP_ITEM_LIST) + list(BLACKMARKET_ITEM_LIST)
         name_w = max(self._str_width(n) for n in all_items) + 2
 
-        header = self._pad("背包", 22) + f"金币:{coins}"
+        header = self._pad("背包", 22) + f"喵币:{coins}"
         lines = [header, ""]
 
         lines.append("=== 商城道具 ===")
@@ -4026,12 +4058,12 @@ class Main(BaseModule):
     def _build_shop_display(self, coins: int) -> str:
         name_w = max(self._str_width(n) for n in SHOP_ITEM_LIST) + 2
 
-        header = self._pad("商城", 22) + f"金币:{coins}"
+        header = self._pad("商城", 22) + f"喵币:{coins}"
         lines = [header, ""]
 
         for i, name in enumerate(SHOP_ITEM_LIST):
             item = SHOP_ITEMS[name]
-            item_str = self._pad(f"{i + 1}.{name}  {item['price']}金币", name_w + 10)
+            item_str = self._pad(f"{i + 1}.{name}  {item['price']}喵币", name_w + 10)
             lines.append(f"{item_str} {item['desc']}")
 
         return "\n".join(lines)
