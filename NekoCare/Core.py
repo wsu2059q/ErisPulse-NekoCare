@@ -3919,7 +3919,7 @@ class Main(BaseModule):
         if stats.get("catch_count", 0) >= 20:
             self._add_title(user_id, "🐱 - 捕猫达人")
         if stats.get("catch_count", 0) >= 50:
-        self._add_title(user_id, "🐾 - 驭猫达人")
+            self._add_title(user_id, "🐾 - 驭猫达人")
         if stats.get("rescue_count", 0) >= 5:
             self._add_title(user_id, "🩺 - 神医再世")
         if stats.get("rescue_count", 0) >= 15:
