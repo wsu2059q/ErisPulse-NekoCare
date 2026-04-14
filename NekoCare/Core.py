@@ -1785,16 +1785,17 @@ class Main(BaseModule):
             await self._send_critical_message(event, cat_data)
             return
 
-        reply = await event.wait_reply("请 @你想抓的猫猫的主人:", timeout=60)
+        reply = await event.wait_reply(
+            "请 @你想抓的猫猫的主人 (或输入用户ID):", timeout=60
+        )
         if not reply:
             return
 
-        args = reply.get_text().strip()
-        if not args:
+        mentions = reply.get_mentions()
+        target_id = mentions[0] if mentions else reply.get_text().strip()
+        if not target_id:
             await self._send_reply(event, "已取消")
             return
-
-        target_id = args
         if target_id == user_id:
             await self._send_reply(event, "不能抓自己的猫猫!")
             return
@@ -2030,11 +2031,15 @@ class Main(BaseModule):
             await self._send_reply(event, f"猫猫还在躲风头，{m}分钟后再来~")
             return
 
-        reply = await event.wait_reply("请 @你想打劫的目标:", timeout=60)
+        reply = await event.wait_reply("请 @你想打劫的目标 (或输入用户ID):", timeout=60)
         if not reply:
             return
 
-        target_id = reply.get_text().strip()
+        mentions = reply.get_mentions()
+        target_id = mentions[0] if mentions else reply.get_text().strip()
+        if not target_id:
+            await self._send_reply(event, "已取消")
+            return
         if target_id == user_id:
             await self._send_reply(event, "不能打劫自己!")
             return
@@ -2648,9 +2653,11 @@ class Main(BaseModule):
                 header,
                 [
                     "返回",
-                    "活期存款/取款",
+                    "存款",
+                    "取款",
                     "定期存款",
-                    "贷款/还款",
+                    "贷款",
+                    "还款",
                     "转账",
                     "股票市场",
                     "理财投资",
@@ -2659,28 +2666,20 @@ class Main(BaseModule):
             if choice is None or choice == 0:
                 return
             elif choice == 1:
-                sub = await event.choose("1. 存款  2. 取款", ["返回", "存款", "取款"])
-                if sub == 1:
-                    await self._handle_deposit(event, user_id)
-                elif sub == 2:
-                    await self._handle_withdraw(event, user_id)
-                elif sub is None:
-                    return
+                await self._handle_deposit(event, user_id)
             elif choice == 2:
-                await self._handle_fixed_deposit(event, user_id)
+                await self._handle_withdraw(event, user_id)
             elif choice == 3:
-                sub = await event.choose("1. 贷款  2. 还款", ["返回", "贷款", "还款"])
-                if sub == 1:
-                    await self._handle_loan_borrow(event, user_id)
-                elif sub == 2:
-                    await self._handle_loan_repay(event, user_id)
-                elif sub is None:
-                    return
+                await self._handle_fixed_deposit(event, user_id)
             elif choice == 4:
-                await self._handle_transfer(event, user_id)
+                await self._handle_loan_borrow(event, user_id)
             elif choice == 5:
-                await self._handle_stocks(event, user_id)
+                await self._handle_loan_repay(event, user_id)
             elif choice == 6:
+                await self._handle_transfer(event, user_id)
+            elif choice == 7:
+                await self._handle_stocks(event, user_id)
+            elif choice == 8:
                 await self._handle_invest(event, user_id)
 
     async def _handle_deposit(self, event, user_id):
@@ -2966,16 +2965,32 @@ class Main(BaseModule):
     async def _handle_transfer(self, event, user_id):
         coins = self._get_coins(user_id)
         reply = await event.wait_reply(
-            f"转账\n\n你的喵币: {coins}\n请输入转账目标 (@对方):",
+            f"转账\n\n你的喵币: {coins}\n请输入转账目标 (@对方 或 输入用户ID):",
             timeout=60,
         )
         if reply is None:
             return
 
-        target_id = reply.get_text().strip()
+        mentions = reply.get_mentions()
+        target_id = mentions[0] if mentions else reply.get_text().strip()
+        if not target_id:
+            await self._send_reply(event, "请指定转账目标")
+            return
+
         if target_id == user_id:
             await self._send_reply(event, "不能转给自己!")
             return
+
+        all_users = self._get_all_users()
+        if target_id not in all_users:
+            await self._send_reply(event, "该用户未注册，无法转账!", card_type="danger")
+            return
+
+        target_nickname = (
+            self.sdk.storage.get(f"nekocare_nickname:{target_id}") or target_id
+        )
+        target_cat = self._get_cat(target_id)
+        cat_info = f"猫猫: {target_cat['name']}" if target_cat else "猫猫: 无"
 
         reply = await event.wait_reply("请输入转账金额:", timeout=60)
         if reply is None:
@@ -2995,11 +3010,21 @@ class Main(BaseModule):
             await self._send_reply(event, f"喵币不足! 只有 {coins}", card_type="danger")
             return
 
+        confirm = await event.choose(
+            f"确认转账给 {target_nickname}\n{cat_info}\n金额: {amount} 喵币",
+            ["取消", "确认转账"],
+        )
+        if confirm != 1:
+            await self._send_reply(event, "已取消转账")
+            return
+
         self._add_coins(user_id, -amount)
         self._add_coins(target_id, amount)
         self._mod_attr(user_id, "rep", 2)
         await self._send_reply(
-            event, f"成功转账 {amount} 喵币! 声望+2", card_type="success"
+            event,
+            f"成功转账 {amount} 喵币给 {target_nickname}! 声望+2",
+            card_type="success",
         )
 
     async def _handle_stocks(self, event, user_id):
