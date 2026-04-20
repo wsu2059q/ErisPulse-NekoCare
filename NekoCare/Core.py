@@ -374,6 +374,42 @@ STOCK_BASE_PRICES = {
     "罐头科技": 300,
 }
 
+STOCK_UPDATE_INTERVAL = 300
+STOCK_BASE_VOLATILITY = 0.05
+STOCK_PRICE_MIN_RATIO = 0.3
+STOCK_PRICE_MAX_RATIO = 2.5
+STOCK_SMOOTH_FACTOR = 0.3
+STOCK_MARKET_TREND_CYCLE = 604800
+STOCK_EVENT_DURATION = 432000
+STOCK_DAILY_RESET_INTERVAL = 86400
+
+COMPANY_TYPES = {
+    "tech": {"name": "科技", "fee": 3000, "growth": 0.15, "risk": 0.12},
+    "manufacture": {"name": "制造", "fee": 2000, "growth": 0.08, "risk": 0.05},
+    "retail": {"name": "零售", "fee": 1500, "growth": 0.10, "risk": 0.07},
+    "service": {"name": "服务", "fee": 1000, "growth": 0.12, "risk": 0.04},
+    "finance": {"name": "金融", "fee": 2500, "growth": 0.18, "risk": 0.10},
+}
+
+COMPANY_INITIAL_CAPITAL = 5000
+COMPANY_MAX_LEVEL = 10
+COMPANY_LEVEL_UP_REVENUE = 10000
+COMPANY_IPO_DAYS = 30
+COMPANY_IPO_MIN_PROFIT = 10000
+COMPANY_IPO_MIN_CASH = 5000
+COMPANY_IPO_MIN_LEVEL = 3
+COMPANY_IPO_FEE = 10000
+COMPANY_DIVIDEND_CYCLE = 2592000
+COMPANY_MAX_COMPANIES_PER_USER = 2
+
+JOB_POSITIONS = {
+    1: {"name": "实习生", "salary": 50, "req_edu": 0},
+    2: {"name": "员工", "salary": 80, "req_edu": 1},
+    3: {"name": "专员", "salary": 120, "req_edu": 2},
+    4: {"name": "主管", "salary": 160, "req_edu": 3},
+    5: {"name": "经理", "salary": 200, "req_edu": 4},
+}
+
 BANK_INTEREST_REGULAR = 0.03
 BANK_INTEREST_FIXED = 0.08
 BANK_FIXED_TERM = 86400
@@ -929,6 +965,7 @@ class Main(BaseModule):
                         "喵喵银行",
                         "学习深造",
                         "背包/商城",
+                        "公司中心",
                         "其他列表",
                         "救助危急猫猫",
                     ],
@@ -957,8 +994,10 @@ class Main(BaseModule):
                 elif choice == 6:
                     await self._handle_bag_menu(event, user_id)
                 elif choice == 7:
-                    await self._handle_other_menu(event, user_id, cat_data)
+                    await self._handle_company_menu(event, user_id)
                 elif choice == 8:
+                    await self._handle_other_menu(event, user_id, cat_data)
+                elif choice == 9:
                     await self._handle_rescue_menu(event, user_id)
 
     async def _handle_feed_menu(self, event, user_id):
@@ -1023,10 +1062,10 @@ class Main(BaseModule):
                 else f"{int((600 - (now - last_scavenge)) // 60) + 1}分"
             )
 
-            header = f"打工({wr})  抓猫({cr})  打劫({rr})\n捡瓶子({sr})  摸鱼捉虫({sr})"
+            header = f"打工({wr})  抓猫({cr})  打劫({rr})\n捡瓶子({sr})  摸鱼捉虫({sr})  招聘市场"
 
             choice = await event.choose(
-                header, ["返回", "打工", "抓猫打工", "打劫", "捡瓶子", "摸鱼捉虫"]
+                header, ["返回", "打工", "抓猫打工", "打劫", "捡瓶子", "摸鱼捉虫", "招聘市场"]
             )
             if choice is None or choice == 0:
                 return
@@ -1040,6 +1079,8 @@ class Main(BaseModule):
                 await self._handle_scavenge(event, user_id)
             elif choice == 5:
                 await self._handle_bugcatch(event, user_id)
+            elif choice == 6:
+                await self._handle_job_market(event, user_id)
 
     async def _quick_greeting(self, event, key: str):
         user_id = event.get_user_id()
@@ -3034,10 +3075,21 @@ class Main(BaseModule):
             coins = self._get_coins(user_id)
 
             lines = [f"股票市场  钱包:{coins}喵币\n"]
-            for i, name in enumerate(STOCK_LIST, 1):
+            stock_list = STOCK_LIST.copy()
+            
+            companies = self._get_companies()
+            for company_id, company in companies.items():
+                if company.get("listed"):
+                    stock_name = f"[{company['name']}]股"
+                    if stock_name not in stock_list:
+                        stock_list.append(stock_name)
+                        STOCK_BASE_PRICES[stock_name] = company["base_price"]
+            
+            for i, name in enumerate(stock_list, 1):
                 held = user_stocks.get(name, 0)
-                price = prices[name]
-                change = price - STOCK_BASE_PRICES[name]
+                price = prices.get(name, STOCK_BASE_PRICES.get(name, 100))
+                base = STOCK_BASE_PRICES.get(name, 100)
+                change = price - base
                 sign = "+" if change >= 0 else ""
                 lines.append(f"{i}. {name}  ¥{price} ({sign}{change})  持有:{held}股")
             lines.append("\n1.买入  2.卖出  0.返回")
@@ -3056,8 +3108,19 @@ class Main(BaseModule):
     async def _handle_buy_stock(self, event, user_id, prices):
         coins = self._get_coins(user_id)
         lines = ["输入要购买的股票编号:\n"]
-        for i, name in enumerate(STOCK_LIST, 1):
-            lines.append(f"{i}. {name} ¥{prices[name]}")
+        stock_list = STOCK_LIST.copy()
+        
+        companies = self._get_companies()
+        for company_id, company in companies.items():
+            if company.get("listed"):
+                stock_name = f"[{company['name']}]股"
+                if stock_name not in stock_list:
+                    stock_list.append(stock_name)
+                    STOCK_BASE_PRICES[stock_name] = company["base_price"]
+        
+        for i, name in enumerate(stock_list, 1):
+            price = prices.get(name, STOCK_BASE_PRICES.get(name, 100))
+            lines.append(f"{i}. {name} ¥{price}")
         lines.append("0. 返回")
 
         reply = await event.wait_reply("\n".join(lines), timeout=60)
@@ -3070,13 +3133,27 @@ class Main(BaseModule):
             return
         if idx == 0:
             return
-        if idx < 1 or idx > len(STOCK_LIST):
+        if idx < 1 or idx > len(stock_list):
             await event.reply("无效编号")
             return
         idx -= 1
 
-        stock_name = STOCK_LIST[idx]
-        price = prices[stock_name]
+        stock_name = stock_list[idx]
+        price = prices.get(stock_name, STOCK_BASE_PRICES.get(stock_name, 100))
+        
+        if stock_name.startswith("[") and stock_name.endswith("]股"):
+            company_name = stock_name[1:-2]
+            companies = self._get_companies()
+            company_id = None
+            for cid, comp in companies.items():
+                if comp["name"] == company_name:
+                    company_id = cid
+                    break
+            
+            if company_id:
+                await self._handle_buy_company_stock(event, user_id, company_id)
+                return
+        
         reply = await event.wait_reply(
             f"{stock_name} 当前价: ¥{price}\n请输入购买数量:", timeout=60
         )
@@ -3105,6 +3182,10 @@ class Main(BaseModule):
         user_stocks = self._get_user_stocks(user_id)
         user_stocks[stock_name] = user_stocks.get(stock_name, 0) + qty
         self._set_user_stocks(user_id, user_stocks)
+        
+        stock_data = self._get_stock_data(stock_name)
+        stock_data["volume_buy"] += qty
+        self._set_stock_data(stock_name, stock_data)
 
         await self._send_reply(
             event, f"买入 {stock_name} x{qty}! 花费 {total_cost} 喵币"
@@ -3114,9 +3195,20 @@ class Main(BaseModule):
         user_stocks = self._get_user_stocks(user_id)
         lines = ["输入要卖出的股票编号:\n"]
         has_stock = False
-        for i, name in enumerate(STOCK_LIST, 1):
+        stock_list = STOCK_LIST.copy()
+        
+        companies = self._get_companies()
+        for company_id, company in companies.items():
+            if company.get("listed"):
+                stock_name = f"[{company['name']}]股"
+                if stock_name not in stock_list:
+                    stock_list.append(stock_name)
+                    STOCK_BASE_PRICES[stock_name] = company["base_price"]
+        
+        for i, name in enumerate(stock_list, 1):
             held = user_stocks.get(name, 0)
-            line = f"{i}. {name} ¥{prices[name]}"
+            price = prices.get(name, STOCK_BASE_PRICES.get(name, 100))
+            line = f"{i}. {name} ¥{price}"
             if held > 0:
                 line += f"  持有:{held}股"
                 has_stock = True
@@ -3136,19 +3228,33 @@ class Main(BaseModule):
             return
         if idx == 0:
             return
-        if idx < 1 or idx > len(STOCK_LIST):
+        if idx < 1 or idx > len(stock_list):
             await event.reply("无效编号")
             return
         idx -= 1
 
-        stock_name = STOCK_LIST[idx]
+        stock_name = stock_list[idx]
         user_stocks = self._get_user_stocks(user_id)
         held = user_stocks.get(stock_name, 0)
         if held <= 0:
             await self._send_reply(event, f"你没有持有 {stock_name}")
             return
 
-        price = prices[stock_name]
+        price = prices.get(stock_name, STOCK_BASE_PRICES.get(stock_name, 100))
+        
+        if stock_name.startswith("[") and stock_name.endswith("]股"):
+            company_name = stock_name[1:-2]
+            companies = self._get_companies()
+            company_id = None
+            for cid, comp in companies.items():
+                if comp["name"] == company_name:
+                    company_id = cid
+                    break
+            
+            if company_id:
+                await self._handle_sell_company_stock(event, user_id, company_id)
+                return
+        
         reply = await event.wait_reply(
             f"{stock_name} 当前价: ¥{price}  持有: {held}股\n请输入卖出数量:",
             timeout=60,
@@ -3170,6 +3276,10 @@ class Main(BaseModule):
             del user_stocks[stock_name]
         self._set_user_stocks(user_id, user_stocks)
         self._add_coins(user_id, revenue)
+        
+        stock_data = self._get_stock_data(stock_name)
+        stock_data["volume_sell"] += qty
+        self._set_stock_data(stock_name, stock_data)
 
         profit = revenue - qty * STOCK_BASE_PRICES[stock_name]
         if profit != 0:
@@ -3830,21 +3940,141 @@ class Main(BaseModule):
         prices = self._get_stock_prices()
         now = time.time()
         last_update = self.sdk.storage.get("nekocare_stock_last_update")
-        interval = 300
-        if last_update is None or (now - last_update) < interval:
+        if last_update is None or (now - last_update) < STOCK_UPDATE_INTERVAL:
             return prices
         self.sdk.storage.set("nekocare_stock_last_update", now)
+        
+        self._update_stock_demand(now)
+        market_trend = self._update_market_trend(now)
+        self._trigger_market_event(now)
+        active_events = self._get_active_events(now)
+        
         for name in STOCK_LIST:
             base = STOCK_BASE_PRICES[name]
-            change = random.uniform(-0.15, 0.15)
-            noise = random.uniform(-base * 0.1, base * 0.1)
-            target = base * (1 + change) + noise
             current = prices[name]
-            new_price = current + (target - current) * 0.3
-            new_price = max(int(base * 0.3), min(int(base * 2.5), int(new_price)))
+            
+            base_change = random.uniform(-STOCK_BASE_VOLATILITY, STOCK_BASE_VOLATILITY)
+            noise = random.uniform(-base * 0.1, base * 0.1)
+            
+            stock_data = self._get_stock_data(name)
+            demand_factor = self._calculate_demand_factor(stock_data)
+            
+            event_impact = self._calculate_event_impact(name, active_events)
+            
+            target = base * (1 + base_change + market_trend + demand_factor + event_impact) + noise
+            new_price = current + (target - current) * STOCK_SMOOTH_FACTOR
+            new_price = max(int(base * STOCK_PRICE_MIN_RATIO), min(int(base * STOCK_PRICE_MAX_RATIO), int(new_price)))
             prices[name] = max(1, new_price)
+            
+            stock_data["price"] = new_price
+            self._set_stock_data(name, stock_data)
+        
         self.sdk.storage.set("nekocare_stock_prices", prices)
         return prices
+    
+    def _get_stock_data(self, stock_name: str) -> dict:
+        stock_data = self.sdk.storage.get(f"nekocare_stock_data:{stock_name}")
+        if stock_data is None:
+            stock_data = {
+                "price": STOCK_BASE_PRICES[stock_name],
+                "base_price": STOCK_BASE_PRICES[stock_name],
+                "volume_buy": 0,
+                "volume_sell": 0,
+                "trend": 0.0,
+                "events": []
+            }
+        return stock_data
+    
+    def _set_stock_data(self, stock_name: str, data: dict):
+        self.sdk.storage.set(f"nekocare_stock_data:{stock_name}", data)
+    
+    def _update_stock_demand(self, now: float):
+        last_reset = self.sdk.storage.get("nekocare_stock_daily_reset")
+        if last_reset is None or (now - last_reset) >= STOCK_DAILY_RESET_INTERVAL:
+            self.sdk.storage.set("nekocare_stock_daily_reset", now)
+            for name in STOCK_LIST:
+                stock_data = self._get_stock_data(name)
+                stock_data["volume_buy"] = 0
+                stock_data["volume_sell"] = 0
+                self._set_stock_data(name, stock_data)
+    
+    def _calculate_demand_factor(self, stock_data: dict) -> float:
+        total_volume = stock_data["volume_buy"] + stock_data["volume_sell"]
+        if total_volume == 0:
+            return 0.0
+        buy_ratio = stock_data["volume_buy"] / total_volume
+        return (buy_ratio - 0.5) * 0.1
+    
+    def _update_market_trend(self, now: float) -> float:
+        trend_data = self.sdk.storage.get("nekocare_market_trend")
+        if trend_data is None:
+            trend_data = {
+                "status": "neutral",
+                "change_time": now,
+                "coefficient": 0.0
+            }
+        
+        if (now - trend_data["change_time"]) >= STOCK_MARKET_TREND_CYCLE:
+            trend_data["change_time"] = now
+            rand = random.random()
+            if rand < 0.33:
+                trend_data["status"] = "bull"
+                trend_data["coefficient"] = random.uniform(0.1, 0.2)
+            elif rand < 0.66:
+                trend_data["status"] = "bear"
+                trend_data["coefficient"] = random.uniform(-0.2, -0.1)
+            else:
+                trend_data["status"] = "neutral"
+                trend_data["coefficient"] = random.uniform(-0.05, 0.05)
+        
+        self.sdk.storage.set("nekocare_market_trend", trend_data)
+        return trend_data["coefficient"]
+    
+    def _get_active_events(self, now: float) -> list:
+        events = self.sdk.storage.get("nekocare_market_events")
+        if events is None:
+            return []
+        return [e for e in events if e["end_time"] > now]
+    
+    def _trigger_market_event(self, now: float):
+        active_events = self._get_active_events(now)
+        if len(active_events) >= 2:
+            return
+        
+        if random.random() < 0.1:
+            event_types = [
+                {"type": "bullish", "impact": 0.1, "target": "all", "desc": "政策扶持，市场繁荣"},
+                {"type": "bullish", "impact": 0.15, "target": "tech", "desc": "技术突破，科技股大涨"},
+                {"type": "bearish", "impact": -0.1, "target": "all", "desc": "市场恐慌，全线下跌"},
+                {"type": "bearish", "impact": -0.15, "target": "manufacture", "desc": "行业监管，制造业受挫"},
+            ]
+            
+            selected_event = random.choice(event_types)
+            event = {
+                "id": str(int(now)),
+                "type": selected_event["type"],
+                "target": selected_event["target"],
+                "impact": selected_event["impact"],
+                "start_time": now,
+                "end_time": now + STOCK_EVENT_DURATION,
+                "description": selected_event["desc"]
+            }
+            
+            events = self.sdk.storage.get("nekocare_market_events") or []
+            events.append(event)
+            self.sdk.storage.set("nekocare_market_events", events)
+    
+    def _calculate_event_impact(self, stock_name: str, active_events: list) -> float:
+        total_impact = 0.0
+        for event in active_events:
+            target = event["target"]
+            if target == "all":
+                total_impact += event["impact"]
+            elif target == "tech" and stock_name in ["罐头科技", "猫薄荷股"]:
+                total_impact += event["impact"]
+            elif target == "manufacture" and stock_name in ["猫砂股", "鱼干公司"]:
+                total_impact += event["impact"]
+        return total_impact
 
     def _get_inventory(self, user_id: str) -> Dict[str, int]:
         inv = self.sdk.storage.get(f"nekocare_inv:{user_id}")
@@ -4489,3 +4719,1125 @@ class Main(BaseModule):
         if hasattr(self.sdk.adapter.get(platform).Send, "Text"):
             supported.append("Text")
         return supported
+    
+    def _get_companies(self) -> dict:
+        companies = self.sdk.storage.get("nekocare_companies")
+        return companies if companies is not None else {}
+    
+    def _set_companies(self, companies: dict):
+        self.sdk.storage.set("nekocare_companies", companies)
+    
+    def _get_company(self, company_id: str) -> Optional[dict]:
+        companies = self._get_companies()
+        return companies.get(company_id)
+    
+    def _set_company(self, company_id: str, data: dict):
+        companies = self._get_companies()
+        companies[company_id] = data
+        self._set_companies(companies)
+    
+    def _get_user_company_ids(self, user_id: str) -> list:
+        user_companies = self.sdk.storage.get(f"nekocare_user_companies:{user_id}")
+        return user_companies if user_companies is not None else []
+    
+    def _set_user_company_ids(self, user_id: str, company_ids: list):
+        self.sdk.storage.set(f"nekocare_user_companies:{user_id}", company_ids)
+    
+    def _get_company_counter(self) -> int:
+        counter = self.sdk.storage.get("nekocare_company_counter")
+        return counter if counter is not None else 0
+    
+    def _increment_company_counter(self):
+        counter = self._get_company_counter() + 1
+        self.sdk.storage.set("nekocare_company_counter", counter)
+        return counter
+    
+    def _company_exists(self, name: str) -> bool:
+        companies = self._get_companies()
+        for company in companies.values():
+            if company.get("name") == name:
+                return True
+        return False
+    
+    async def _handle_company_menu(self, event, user_id):
+        while True:
+            lines = ["🏢 公司中心\n"]
+            company_ids = self._get_user_company_ids(user_id)
+            
+            if company_ids:
+                lines.append("你的公司：")
+                for i, company_id in enumerate(company_ids, 1):
+                    company = self._get_company(company_id)
+                    if company:
+                        status = "📈 已上市" if company.get("listed") else "📊 未上市"
+                        lines.append(f"{i}. {company['name']} ({company['type']}) {status}")
+                lines.append(f"\n{len(company_ids) + 1}. 管理公司\n")
+            else:
+                lines.append("你还没有公司\n")
+            
+            lines.append(f"{len(company_ids) + 2 if company_ids else 1}. 注册新公司\n")
+            lines.append("0. 返回")
+            
+            reply = await event.wait_reply("\n".join(lines), timeout=60)
+            if reply is None:
+                return
+            text = reply.get_text().strip()
+            
+            if text == "0":
+                return
+            
+            try:
+                choice = int(text)
+            except ValueError:
+                await event.reply("请输入有效编号")
+                continue
+            
+            if company_ids:
+                if choice == len(company_ids) + 1:
+                    await self._handle_select_company_manage(event, user_id)
+                elif choice == len(company_ids) + 2:
+                    await self._handle_register_company(event, user_id)
+                elif 1 <= choice <= len(company_ids):
+                    company = self._get_company(company_ids[choice - 1])
+                    if company:
+                        await self._handle_company_info(event, company_ids[choice - 1], company)
+                else:
+                    await event.reply("无效编号")
+            else:
+                if choice == 1:
+                    await self._handle_register_company(event, user_id)
+                else:
+                    await event.reply("无效编号")
+    
+    async def _handle_register_company(self, event, user_id):
+        if len(self._get_user_company_ids(user_id)) >= COMPANY_MAX_COMPANIES_PER_USER:
+            await self._send_reply(
+                event,
+                f"你最多只能拥有 {COMPANY_MAX_COMPANIES_PER_USER} 个公司",
+                card_type="danger"
+            )
+            return
+        
+        lines = ["📝 注册新公司\n"]
+        lines.append("选择公司类型：\n")
+        for key, data in COMPANY_TYPES.items():
+            lines.append(f"{key}. {data['name']} - 注册费:{data['fee']} 喵币")
+        lines.append("\n请输入类型编号 (输入0取消):")
+        
+        reply = await event.wait_reply("\n".join(lines), timeout=60)
+        if reply is None:
+            return
+        text = reply.get_text().strip()
+        
+        if text == "0":
+            return
+        
+        company_type = text
+        if company_type not in COMPANY_TYPES:
+            await event.reply("无效的公司类型")
+            return
+        
+        type_data = COMPANY_TYPES[company_type]
+        coins = self._get_coins(user_id)
+        
+        if coins < type_data["fee"] + COMPANY_INITIAL_CAPITAL:
+            await self._send_reply(
+                event,
+                f"喵币不足！需要 {type_data['fee'] + COMPANY_INITIAL_CAPITAL} 喵币（注册费{type_data['fee']} + 初始资本{COMPANY_INITIAL_CAPITAL}）",
+                card_type="danger"
+            )
+            return
+        
+        reply = await event.wait_reply(
+            f"请输入公司名称（不能重复，输入0取消）:",
+            timeout=60
+        )
+        if reply is None:
+            return
+        company_name = reply.get_text().strip()
+        
+        if company_name == "0":
+            return
+        
+        if len(company_name) < 2 or len(company_name) > 10:
+            await self._send_reply(
+                event,
+                "公司名称长度为2-10个字符",
+                card_type="danger"
+            )
+            return
+        
+        if self._company_exists(company_name):
+            await self._send_reply(
+                event,
+                "公司名称已被使用",
+                card_type="danger"
+            )
+            return
+        
+        total_cost = type_data["fee"] + COMPANY_INITIAL_CAPITAL
+        self._add_coins(user_id, -total_cost)
+        
+        company_id = str(self._increment_company_counter())
+        now = time.time()
+        
+        company = {
+            "id": company_id,
+            "name": company_name,
+            "owner_id": user_id,
+            "type": company_type,
+            "level": 1,
+            "registered_time": now,
+            "listed": False,
+            "cash": COMPANY_INITIAL_CAPITAL,
+            "total_shares": 0,
+            "share_price": 0,
+            "base_price": 0,
+            "revenue": 0,
+            "profit": 0,
+            "employees": {},
+            "dividend_ratio": 0.5,
+            "last_dividend_time": 0,
+            "market_sentiment": 0.0,
+        }
+        
+        self._set_company(company_id, company)
+        
+        user_company_ids = self._get_user_company_ids(user_id)
+        user_company_ids.append(company_id)
+        self._set_user_company_ids(user_id, user_company_ids)
+        
+        await self._send_reply(
+            event,
+            f"🎉 公司注册成功！\n\n"
+            f"公司名称: {company_name}\n"
+            f"公司类型: {type_data['name']}\n"
+            f"初始资本: {COMPANY_INITIAL_CAPITAL} 喵币\n"
+            f"公司等级: 1\n"
+            f"\n祝你的公司生意兴隆！",
+            card_type="success"
+        )
+    
+    async def _handle_company_info(self, event, company_id: str, company: dict):
+        type_data = COMPANY_TYPES[company["type"]]
+        days_registered = int((time.time() - company["registered_time"]) / 86400)
+        
+        lines = [
+            f"🏢 {company['name']}\n",
+            f"类型: {type_data['name']}",
+            f"等级: {company['level']}/{COMPANY_MAX_LEVEL}",
+            f"成立天数: {days_registered}天",
+            f"\n💰 财务状况",
+            f"现金: {company['cash']} 喵币",
+            f"累计收入: {company['revenue']} 喵币",
+            f"累计利润: {company['profit']} 喵币",
+            f"\n📊 公司规模",
+            f"员工数量: {len(company['employees'])}人",
+        ]
+        
+        if company["listed"]:
+            lines.append(f"\n📈 上市状态: 已上市")
+            lines.append(f"总股本: {company['total_shares']}股")
+            lines.append(f"当前股价: ¥{company['share_price']}")
+        else:
+            lines.append(f"\n📊 上市状态: 未上市")
+            days_to_ipo = max(0, COMPANY_IPO_DAYS - days_registered)
+            if days_to_ipo > 0:
+                lines.append(f"距离上市条件（时间）: {days_to_ipo}天")
+            else:
+                lines.append(f"✅ 时间条件已满足")
+            
+            profit_ready = "✅" if company["profit"] >= COMPANY_IPO_MIN_PROFIT else "❌"
+            lines.append(f"累计利润要求: {profit_ready} ({company['profit']}/{COMPANY_IPO_MIN_PROFIT})")
+            
+            cash_ready = "✅" if company["cash"] >= COMPANY_IPO_MIN_CASH else "❌"
+            lines.append(f"现金要求: {cash_ready} ({company['cash']}/{COMPANY_IPO_MIN_CASH})")
+            
+            level_ready = "✅" if company["level"] >= COMPANY_IPO_MIN_LEVEL else "❌"
+            lines.append(f"公司等级要求: {level_ready} ({company['level']}/{COMPANY_IPO_MIN_LEVEL})")
+            
+            if (days_to_ipo == 0 and 
+                company["profit"] >= COMPANY_IPO_MIN_PROFIT and 
+                company["cash"] >= COMPANY_IPO_MIN_CASH and 
+                company["level"] >= COMPANY_IPO_MIN_LEVEL):
+                lines.append(f"\n🎯 满足上市条件！可以申请上市")
+        
+        await event.reply("\n".join(lines))
+    
+    async def _handle_select_company_manage(self, event, user_id):
+        company_ids = self._get_user_company_ids(user_id)
+        
+        lines = ["选择要管理的公司：\n"]
+        for i, company_id in enumerate(company_ids, 1):
+            company = self._get_company(company_id)
+            if company:
+                lines.append(f"{i}. {company['name']}")
+        lines.append("\n0. 返回")
+        
+        reply = await event.wait_reply("\n".join(lines), timeout=60)
+        if reply is None:
+            return
+        text = reply.get_text().strip()
+        
+        if text == "0":
+            return
+        
+        try:
+            choice = int(text)
+        except ValueError:
+            await event.reply("请输入有效编号")
+            return
+        
+        if 1 <= choice <= len(company_ids):
+            await self._handle_company_manage(event, company_ids[choice - 1])
+        else:
+            await event.reply("无效编号")
+    
+    async def _handle_company_manage(self, event, company_id: str):
+        company = self._get_company(company_id)
+        if not company:
+            await event.reply("公司不存在")
+            return
+        
+        while True:
+            lines = [
+                f"🏢 管理中心 - {company['name']}\n",
+                f"现金: {company['cash']} 喵币",
+                f"员工: {len(company['employees'])}人",
+                f"\n1. 公司详情",
+                f"2. 招聘员工",
+            ]
+            
+            if not company["listed"] and self._check_ipo_eligibility(company):
+                lines.append("3. 申请上市")
+            
+            if company["listed"]:
+                lines.append("3. 发放分红")
+            
+            lines.append("\n0. 返回")
+            
+            reply = await event.wait_reply("\n".join(lines), timeout=60)
+            if reply is None:
+                return
+            text = reply.get_text().strip()
+            
+            if text == "0":
+                return
+            elif text == "1":
+                await self._handle_company_info(event, company_id, company)
+                company = self._get_company(company_id)
+            elif text == "2":
+                await self._handle_recruit_employees(event, company_id, company)
+                company = self._get_company(company_id)
+            elif text == "3" and not company["listed"] and self._check_ipo_eligibility(company):
+                await self._handle_company_ipo(event, company_id, company)
+                company = self._get_company(company_id)
+            elif text == "3" and company["listed"]:
+                await self._handle_company_dividend(event, company_id, company)
+                company = self._get_company(company_id)
+            else:
+                await event.reply("无效编号")
+    
+    def _check_ipo_eligibility(self, company: dict) -> bool:
+        days_registered = (time.time() - company["registered_time"]) / 86400
+        return (days_registered >= COMPANY_IPO_DAYS and
+                company["profit"] >= COMPANY_IPO_MIN_PROFIT and
+                company["cash"] >= COMPANY_IPO_MIN_CASH and
+                company["level"] >= COMPANY_IPO_MIN_LEVEL)
+    
+    async def _handle_company_ipo(self, event, company_id: str, company: dict):
+        lines = [
+            f"📈 申请上市 - {company['name']}\n",
+            f"上市费用: {COMPANY_IPO_FEE} 喵币",
+            f"公司现金: {company['cash']} 喵币",
+            f"\n确定要申请上市吗？（y/n）"
+        ]
+        
+        reply = await event.wait_reply("\n".join(lines), timeout=60)
+        if reply is None:
+            return
+        text = reply.get_text().strip().lower()
+        
+        if text != "y":
+            await event.reply("已取消上市申请")
+            return
+        
+        if company["cash"] < COMPANY_IPO_FEE:
+            await self._send_reply(
+                event,
+                f"现金不足！需要 {COMPANY_IPO_FEE} 喵币",
+                card_type="danger"
+            )
+            return
+        
+        company["cash"] -= COMPANY_IPO_FEE
+        company["listed"] = True
+        company["listed_time"] = time.time()
+        
+        company_value = max(company["cash"], 10000)
+        company["total_shares"] = min(int(company_value / 10), 5000)
+        company["base_price"] = max(int(company_value / company["total_shares"]), 1)
+        company["share_price"] = company["base_price"]
+        
+        stock_name = f"[{company['name']}]股"
+        if stock_name not in STOCK_LIST:
+            STOCK_LIST.append(stock_name)
+            STOCK_BASE_PRICES[stock_name] = company["base_price"]
+        
+        self._set_company(company_id, company)
+        
+        await self._send_reply(
+            event,
+            f"🎉 上市成功！\n\n"
+            f"公司名称: {company['name']}\n"
+            f"股票名称: {stock_name}\n"
+            f"总股本: {company['total_shares']}股\n"
+            f"发行价: ¥{company['base_price']}\n"
+            f"\n你的股票已开始交易！",
+            card_type="success"
+        )
+    
+    async def _handle_company_dividend(self, event, company_id: str, company: dict):
+        now = time.time()
+        last_dividend = company.get("last_dividend_time", 0)
+        
+        if (now - last_dividend) < COMPANY_DIVIDEND_CYCLE:
+            remaining_days = int((COMPANY_DIVIDEND_CYCLE - (now - last_dividend)) / 86400)
+            await self._send_reply(
+                event,
+                f"分红周期未到，还需 {remaining_days} 天",
+                card_type="warning"
+            )
+            return
+        
+        if company["profit"] <= 0:
+            await self._send_reply(
+                event,
+                "公司利润为负，无法分红",
+                card_type="danger"
+            )
+            return
+        
+        lines = [
+            f"💰 发放分红 - {company['name']}\n",
+            f"累计利润: {company['profit']} 喵币",
+            f"当前分红比例: {company['dividend_ratio'] * 100:.0f}%",
+            f"\n1. 修改分红比例",
+            f"2. 确认发放分红",
+            f"\n0. 返回"
+        ]
+        
+        reply = await event.wait_reply("\n".join(lines), timeout=60)
+        if reply is None:
+            return
+        text = reply.get_text().strip()
+        
+        if text == "0":
+            return
+        elif text == "1":
+            reply = await event.wait_reply(
+                f"当前分红比例: {company['dividend_ratio'] * 100:.0f}%\n"
+                f"请输入新的分红比例 (30-70%):",
+                timeout=60
+            )
+            if reply is None:
+                return
+            try:
+                ratio = int(reply.get_text().strip()) / 100
+                if 0.3 <= ratio <= 0.7:
+                    company["dividend_ratio"] = ratio
+                    self._set_company(company_id, company)
+                    await event.reply(f"分红比例已修改为 {ratio * 100:.0f}%")
+                else:
+                    await event.reply("分红比例必须在30%-70%之间")
+            except ValueError:
+                await event.reply("请输入有效数字")
+        elif text == "2":
+            total_dividend = int(company["profit"] * company["dividend_ratio"])
+            if company["cash"] < total_dividend:
+                await self._send_reply(
+                    event,
+                    f"现金不足！需要 {total_dividend} 喵币，当前只有 {company['cash']} 喵币",
+                    card_type="danger"
+                )
+                return
+            
+            company["cash"] -= total_dividend
+            company["last_dividend_time"] = now
+            
+            per_share_dividend = total_dividend // company["total_shares"]
+            if per_share_dividend < 1:
+                per_share_dividend = 1
+            
+            company_shares = self.sdk.storage.get(f"nekocare_company_shares:{company_id}") or {}
+            shareholder_count = 0
+            
+            for shareholder_id, share_count in company_shares.items():
+                if share_count > 0:
+                    dividend_amount = per_share_dividend * share_count
+                    self._add_coins(shareholder_id, dividend_amount)
+                    shareholder_count += 1
+            
+            self._set_company(company_id, company)
+            
+            await self._send_reply(
+                event,
+                f"💰 分红已发放！\n\n"
+                f"总分红金额: {total_dividend} 喵币\n"
+                f"每股分红: ¥{per_share_dividend}\n"
+                f"分红股东数: {shareholder_count}人",
+                card_type="success"
+            )
+        else:
+            await event.reply("无效编号")
+    
+    def _update_company_daily(self):
+        companies = self._get_companies()
+        now = time.time()
+        
+        for company_id, company in companies.items():
+            if company.get("listed", False):
+                type_data = COMPANY_TYPES[company["type"]]
+                
+                employee_count = len(company["employees"])
+                base_revenue = 100 + employee_count * 50
+                level_bonus = (company["level"] - 1) * 0.1
+                market_factor = 1.0 + self._get_market_trend_factor()
+                
+                daily_revenue = int(base_revenue * (1 + level_bonus) * market_factor)
+                
+                daily_expenses = employee_count * 30 + 50
+                
+                daily_profit = daily_revenue - daily_expenses
+                
+                company["revenue"] += daily_revenue
+                company["profit"] += daily_profit
+                company["cash"] += daily_profit
+                
+                if company["profit"] >= COMPANY_LEVEL_UP_REVENUE * company["level"]:
+                    if company["level"] < COMPANY_MAX_LEVEL:
+                        company["level"] += 1
+                
+                if company["listed"]:
+                    stock_name = f"[{company['name']}]股"
+                    profit_ratio = company["profit"] / max(company["revenue"], 1)
+                    price_change = profit_ratio * 0.2
+                    
+                    stock_data = self._get_stock_data(stock_name)
+                    stock_data["price"] = int(stock_data["price"] * (1 + price_change))
+                    self._set_stock_data(stock_name, stock_data)
+                    
+                    prices = self._get_stock_prices()
+                    prices[stock_name] = stock_data["price"]
+                    self.sdk.storage.set("nekocare_stock_prices", prices)
+                    
+                    company["share_price"] = stock_data["price"]
+                
+                self._set_company(company_id, company)
+    
+    def _get_market_trend_factor(self) -> float:
+        trend_data = self.sdk.storage.get("nekocare_market_trend")
+        if trend_data:
+            return trend_data.get("coefficient", 0.0)
+        return 0.0
+    
+    def _get_job_applications(self, company_id: str) -> dict:
+        apps = self.sdk.storage.get(f"nekocare_job_applications:{company_id}")
+        return apps if apps is not None else {}
+    
+    def _set_job_applications(self, company_id: str, apps: dict):
+        self.sdk.storage.set(f"nekocare_job_applications:{company_id}", apps)
+    
+    def _get_user_application(self, user_id: str) -> Optional[dict]:
+        companies = self._get_companies()
+        for company_id, company in companies.items():
+            apps = self._get_job_applications(company_id)
+            if user_id in apps and apps[user_id]["status"] == "pending":
+                return {"company_id": company_id, "company_name": company["name"], "application": apps[user_id]}
+        return None
+    
+    async def _handle_recruit_employees(self, event, company_id: str, company: dict):
+        while True:
+            lines = [
+                f"👥 招聘管理 - {company['name']}\n",
+                f"当前员工: {len(company['employees'])}人",
+                f"\n1. 发布招聘信息",
+                f"2. 查看申请列表",
+                f"3. 查看员工列表",
+                f"\n0. 返回"
+            ]
+            
+            reply = await event.wait_reply("\n".join(lines), timeout=60)
+            if reply is None:
+                return
+            text = reply.get_text().strip()
+            
+            if text == "0":
+                return
+            elif text == "1":
+                await self._handle_post_job(event, company_id, company)
+            elif text == "2":
+                await self._handle_view_applications(event, company_id, company)
+                company = self._get_company(company_id)
+            elif text == "3":
+                await self._handle_view_employees(event, company)
+            else:
+                await event.reply("无效编号")
+    
+    async def _handle_post_job(self, event, company_id: str, company: dict):
+        lines = [
+            f"📢 发布招聘 - {company['name']}\n",
+            f"选择职位等级：\n"
+        ]
+        
+        for level, position in JOB_POSITIONS.items():
+            lines.append(f"{level}. {position['name']} - 薪资: {position['salary']} 喵币/次")
+        
+        lines.append("\n输入职位等级 (输入0取消):")
+        
+        reply = await event.wait_reply("\n".join(lines), timeout=60)
+        if reply is None:
+            return
+        text = reply.get_text().strip()
+        
+        if text == "0":
+            return
+        
+        try:
+            position_level = int(text)
+        except ValueError:
+            await event.reply("请输入有效数字")
+            return
+        
+        if position_level not in JOB_POSITIONS:
+            await event.reply("无效的职位等级")
+            return
+        
+        await self._send_reply(
+            event,
+            f"✅ 招聘信息已发布！\n\n"
+            f"公司: {company['name']}\n"
+            f"职位: {JOB_POSITIONS[position_level]['name']}\n"
+            f"薪资: {JOB_POSITIONS[position_level]['salary']} 喵币/次\n"
+            f"\n玩家可以到招聘市场申请该职位",
+            card_type="success"
+        )
+    
+    async def _handle_view_applications(self, event, company_id: str, company: dict):
+        apps = self._get_job_applications(company_id)
+        pending_apps = {uid: app for uid, app in apps.items() if app["status"] == "pending"}
+        
+        if not pending_apps:
+            await event.reply("当前没有待处理的申请")
+            return
+        
+        lines = ["📋 待处理申请\n"]
+        for i, (user_id, app) in enumerate(pending_apps.items(), 1):
+            nick = self._get_nickname(user_id) or user_id
+            position = JOB_POSITIONS.get(app["position"], {}).get("name", "未知")
+            lines.append(f"{i}. {nick} - 申请: {position}")
+        
+        lines.append("\n输入编号查看详情 (输入0返回):")
+        
+        reply = await event.wait_reply("\n".join(lines), timeout=60)
+        if reply is None:
+            return
+        text = reply.get_text().strip()
+        
+        if text == "0":
+            return
+        
+        try:
+            choice = int(text)
+        except ValueError:
+            await event.reply("请输入有效数字")
+            return
+        
+        user_ids = list(pending_apps.keys())
+        if 1 <= choice <= len(user_ids):
+            await self._handle_review_application(event, company_id, user_ids[choice - 1], company)
+        else:
+            await event.reply("无效编号")
+    
+    async def _handle_review_application(self, event, company_id: str, applicant_id: str, company: dict):
+        apps = self._get_job_applications(company_id)
+        app = apps.get(applicant_id)
+        
+        if not app or app["status"] != "pending":
+            await event.reply("申请不存在或已处理")
+            return
+        
+        nick = self._get_nickname(applicant_id) or applicant_id
+        position = JOB_POSITIONS.get(app["position"], {}).get("name", "未知")
+        attrs = self._get_attrs(applicant_id)
+        
+        lines = [
+            f"👤 申请详情\n",
+            f"申请人: {nick}",
+            f"申请职位: {position}",
+            f"申请时间: {time.strftime('%Y-%m-%d %H:%M', time.localtime(app['apply_time']))}",
+            f"\n📊 属性值",
+            f"智力: {attrs['int']}",
+            f"体力: {attrs['hp']}",
+            f"魅力: {attrs['cha']}",
+            f"\n1. 接受申请",
+            f"2. 拒绝申请",
+            f"\n0. 返回"
+        ]
+        
+        reply = await event.wait_reply("\n".join(lines), timeout=60)
+        if reply is None:
+            return
+        text = reply.get_text().strip()
+        
+        if text == "0":
+            return
+        elif text == "1":
+            app["status"] = "accepted"
+            apps[applicant_id] = app
+            self._set_job_applications(company_id, apps)
+            
+            company["employees"][applicant_id] = {
+                "position": app["position"],
+                "salary": JOB_POSITIONS[app["position"]]["salary"],
+                "join_time": time.time(),
+                "efficiency": 1.0,
+            }
+            self._set_company(company_id, company)
+            
+            await self._send_reply(
+                event,
+                f"✅ 已接受 {nick} 的申请！\n"
+                f"职位: {position}",
+                card_type="success"
+            )
+        elif text == "2":
+            app["status"] = "rejected"
+            apps[applicant_id] = app
+            self._set_job_applications(company_id, apps)
+            
+            await event.reply(f"❌ 已拒绝 {nick} 的申请")
+        else:
+            await event.reply("无效编号")
+    
+    async def _handle_view_employees(self, event, company: dict):
+        if not company["employees"]:
+            await event.reply("公司还没有员工")
+            return
+        
+        lines = ["👥 员工列表\n"]
+        for user_id, emp in company["employees"].items():
+            nick = self._get_nickname(user_id) or user_id
+            position = JOB_POSITIONS.get(emp["position"], {}).get("name", "未知")
+            lines.append(f"{nick} - {position} (薪资: {emp['salary']} 喵币)")
+        
+        await event.reply("\n".join(lines))
+    
+    async def _handle_job_market(self, event, user_id):
+        while True:
+            lines = ["💼 招聘市场\n"]
+            lines.append("1. 查看所有招聘信息")
+            lines.append("2. 查看我的申请")
+            lines.append("3. 开始工作")
+            lines.append("\n0. 返回")
+            
+            reply = await event.wait_reply("\n".join(lines), timeout=60)
+            if reply is None:
+                return
+            text = reply.get_text().strip()
+            
+            if text == "0":
+                return
+            elif text == "1":
+                await self._handle_view_job_postings(event)
+            elif text == "2":
+                await self._handle_view_my_applications(event, user_id)
+            elif text == "3":
+                await self._handle_perform_company_work(event, user_id)
+            else:
+                await event.reply("无效编号")
+    
+    async def _handle_view_job_postings(self, event):
+        companies = self._get_companies()
+        lines = ["📢 招聘信息\n"]
+        
+        count = 0
+        for company_id, company in companies.items():
+            apps = self._get_job_applications(company_id)
+            for user_id, app in apps.items():
+                if app["status"] == "pending":
+                    position = JOB_POSITIONS.get(app["position"], {}).get("name", "未知")
+                    lines.append(f"{count + 1}. {company['name']} - {position} ({JOB_POSITIONS[app['position']]['salary']} 喵币/次)")
+                    count += 1
+        
+        if count == 0:
+            await event.reply("当前没有招聘信息")
+            return
+        
+        lines.append("\n输入编号申请职位 (输入0返回):")
+        
+        reply = await event.wait_reply("\n".join(lines), timeout=60)
+        if reply is None:
+            return
+        text = reply.get_text().strip()
+        
+        if text == "0":
+            return
+        
+        try:
+            choice = int(text)
+        except ValueError:
+            await event.reply("请输入有效数字")
+            return
+        
+        if 1 <= choice <= count:
+            await self._handle_apply_job(event, choice)
+        else:
+            await event.reply("无效编号")
+    
+    async def _handle_apply_job(self, event, choice: int):
+        companies = self._get_companies()
+        postings = []
+        
+        for company_id, company in companies.items():
+            apps = self._get_job_applications(company_id)
+            for user_id, app in apps.items():
+                if app["status"] == "pending":
+                    postings.append({
+                        "company_id": company_id,
+                        "company_name": company["name"],
+                        "position": app["position"],
+                        "salary": JOB_POSITIONS[app["position"]]["salary"]
+                    })
+        
+        if 1 <= choice <= len(postings):
+            posting = postings[choice - 1]
+            
+            lines = [
+                f"📝 申请职位\n",
+                f"公司: {posting['company_name']}",
+                f"职位: {JOB_POSITIONS[posting['position']]['name']}",
+                f"薪资: {posting['salary']} 喵币/次",
+                f"\n确定要申请吗？（y/n）"
+            ]
+            
+            reply = await event.wait_reply("\n".join(lines), timeout=60)
+            if reply is None:
+                return
+            text = reply.get_text().strip().lower()
+            
+            if text == "y":
+                event_data = event.get_data()
+                user_id = event_data.get("user_id")
+                
+                existing = self._get_user_application(user_id)
+                if existing:
+                    await self._send_reply(
+                        event,
+                        f"你已有待处理的申请：{existing['company_name']}",
+                        card_type="warning"
+                    )
+                    return
+                
+                apps = self._get_job_applications(posting["company_id"])
+                apps[user_id] = {
+                    "position": posting["position"],
+                    "apply_time": time.time(),
+                    "status": "pending"
+                }
+                self._set_job_applications(posting["company_id"], apps)
+                
+                await self._send_reply(
+                    event,
+                    f"✅ 申请已提交！\n\n"
+                    f"公司: {posting['company_name']}\n"
+                    f"职位: {JOB_POSITIONS[posting['position']]['name']}\n"
+                    f"\n等待公司审核...",
+                    card_type="success"
+                )
+        else:
+            await event.reply("无效编号")
+    
+    async def _handle_view_my_applications(self, event, user_id: str):
+        existing = self._get_user_application(user_id)
+        
+        if not existing:
+            await event.reply("你没有待处理的申请")
+            return
+        
+        position = JOB_POSITIONS.get(existing["application"]["position"], {}).get("name", "未知")
+        lines = [
+            f"📋 我的申请\n",
+            f"公司: {existing['company_name']}",
+            f"职位: {position}",
+            f"状态: 待审核",
+            f"\n你可以先去工作，审核通过后会自动入职"
+        ]
+        
+        await event.reply("\n".join(lines))
+    
+    async def _handle_perform_company_work(self, event, user_id: str):
+        companies = self._get_companies()
+        my_jobs = []
+        
+        for company_id, company in companies.items():
+            if user_id in company["employees"]:
+                my_jobs.append({
+                    "company_id": company_id,
+                    "company_name": company["name"],
+                    "employee_data": company["employees"][user_id]
+                })
+        
+        if not my_jobs:
+            await self._send_reply(
+                event,
+                "你还没有入职任何公司",
+                card_type="warning"
+            )
+            return
+        
+        lines = ["💼 我的工作\n"]
+        for i, job in enumerate(my_jobs, 1):
+            position = JOB_POSITIONS.get(job["employee_data"]["position"], {}).get("name", "未知")
+            lines.append(f"{i}. {job['company_name']} - {position}")
+        
+        lines.append("\n输入编号开始工作 (输入0返回):")
+        
+        reply = await event.wait_reply("\n".join(lines), timeout=60)
+        if reply is None:
+            return
+        text = reply.get_text().strip()
+        
+        if text == "0":
+            return
+        
+        try:
+            choice = int(text)
+        except ValueError:
+            await event.reply("请输入有效数字")
+            return
+        
+        if 1 <= choice <= len(my_jobs):
+            job = my_jobs[choice - 1]
+            await self._do_company_work(event, user_id, job["company_id"], job["employee_data"])
+        else:
+            await event.reply("无效编号")
+    
+    async def _do_company_work(self, event, user_id: str, company_id: str, employee_data: dict):
+        if not self._check_cooldown(user_id, "work", 3600):
+            await self._send_reply(
+                event,
+                "工作冷却中，请稍后再试",
+                card_type="warning"
+            )
+            return
+        
+        position_level = employee_data["position"]
+        base_salary = JOB_POSITIONS[position_level]["salary"]
+        
+        attrs = self._get_attrs(user_id)
+        stat_key = "int" if position_level <= 2 else ("hp" if position_level <= 3 else "cha")
+        stat_val = attrs.get(stat_key, 10)
+        
+        bonus = 0
+        if stat_val >= 60:
+            bonus = int(base_salary * 0.15)
+        
+        total_earnings = base_salary + bonus
+        
+        self._add_coins(user_id, total_earnings)
+        self._set_cooldown(user_id, "work")
+        
+        company = self._get_company(company_id)
+        if company:
+            company["cash"] -= total_earnings
+            self._set_company(company_id, company)
+        
+        await self._send_reply(
+            event,
+            f"💼 工作完成！\n\n"
+            f"基础工资: {base_salary} 喵币\n"
+            f"属性加成: {bonus} 喵币\n"
+            f"总收入: {total_earnings} 喵币",
+            card_type="success"
+        )
+    
+    def _get_company_shares(self, company_id: str) -> dict:
+        shares = self.sdk.storage.get(f"nekocare_company_shares:{company_id}")
+        return shares if shares is not None else {}
+    
+    def _set_company_shares(self, company_id: str, shares: dict):
+        self.sdk.storage.set(f"nekocare_company_shares:{company_id}", shares)
+    
+    def _add_share(self, company_id: str, user_id: str, amount: int):
+        shares = self._get_company_shares(company_id)
+        shares[user_id] = shares.get(user_id, 0) + amount
+        self._set_company_shares(company_id, shares)
+        
+        user_stocks = self._get_user_stocks(user_id)
+        company = self._get_company(company_id)
+        stock_name = f"[{company['name']}]股"
+        user_stocks[stock_name] = user_stocks.get(stock_name, 0) + amount
+        self._set_user_stocks(user_id, user_stocks)
+    
+    def _remove_share(self, company_id: str, user_id: str, amount: int):
+        shares = self._get_company_shares(company_id)
+        if user_id in shares:
+            shares[user_id] -= amount
+            if shares[user_id] <= 0:
+                del shares[user_id]
+            self._set_company_shares(company_id, shares)
+        
+        user_stocks = self._get_user_stocks(user_id)
+        company = self._get_company(company_id)
+        stock_name = f"[{company['name']}]股"
+        if stock_name in user_stocks:
+            user_stocks[stock_name] -= amount
+            if user_stocks[stock_name] <= 0:
+                del user_stocks[stock_name]
+            self._set_user_stocks(user_id, user_stocks)
+    
+    def _get_user_share_count(self, company_id: str, user_id: str) -> int:
+        shares = self._get_company_shares(company_id)
+        return shares.get(user_id, 0)
+    
+    def _get_nickname(self, user_id: str) -> Optional[str]:
+        return self.sdk.storage.get(f"nekocare_nickname:{user_id}")
+    
+    def _get_cooldown(self, user_id: str, action: str) -> float:
+        cd = self.sdk.storage.get(f"nekocare_{action}_cd:{user_id}")
+        return cd if cd is not None else 0
+    
+    def _set_cooldown(self, user_id: str, action: str):
+        self.sdk.storage.set(f"nekocare_{action}_cd:{user_id}", time.time())
+    
+    async def _handle_buy_company_stock(self, event, user_id: str, company_id: str):
+        company = self._get_company(company_id)
+        if not company or not company.get("listed"):
+            await event.reply("公司不存在或未上市")
+            return
+        
+        stock_name = f"[{company['name']}]股"
+        prices = self._get_stock_prices()
+        price = prices.get(stock_name, company["share_price"])
+        
+        lines = [
+            f"📈 买入股票 - {company['name']}\n",
+            f"当前股价: ¥{price}",
+            f"公司现金: {company['cash']} 喵币",
+            f"你的钱包: {self._get_coins(user_id)} 喵币",
+            f"\n请输入购买数量 (输入0返回):"
+        ]
+        
+        reply = await event.wait_reply("\n".join(lines), timeout=60)
+        if reply is None:
+            return
+        text = reply.get_text().strip()
+        
+        if text == "0":
+            return
+        
+        try:
+            qty = int(text)
+        except ValueError:
+            await event.reply("请输入有效数字")
+            return
+        
+        if qty < 1:
+            await event.reply("请输入正整数")
+            return
+        
+        total_cost = price * qty
+        coins = self._get_coins(user_id)
+        
+        if total_cost > coins:
+            await self._send_reply(
+                event,
+                f"喵币不足！需要 {total_cost} 喵币",
+                card_type="danger"
+            )
+            return
+        
+        self._add_coins(user_id, -total_cost)
+        self._add_share(company_id, user_id, qty)
+        
+        stock_data = self._get_stock_data(stock_name)
+        stock_data["volume_buy"] += qty
+        self._set_stock_data(stock_name, stock_data)
+        
+        await self._send_reply(
+            event,
+            f"✅ 买入成功！\n\n"
+            f"股票: {stock_name}\n"
+            f"数量: {qty}股\n"
+            f"单价: ¥{price}\n"
+            f"总价: {total_cost} 喵币",
+            card_type="success"
+        )
+    
+    async def _handle_sell_company_stock(self, event, user_id: str, company_id: str):
+        company = self._get_company(company_id)
+        if not company or not company.get("listed"):
+            await event.reply("公司不存在或未上市")
+            return
+        
+        stock_name = f"[{company['name']}]股"
+        held = self._get_user_share_count(company_id, user_id)
+        
+        if held <= 0:
+            await self._send_reply(
+                event,
+                f"你没有持有 {stock_name}",
+                card_type="warning"
+            )
+            return
+        
+        prices = self._get_stock_prices()
+        price = prices.get(stock_name, company["share_price"])
+        
+        lines = [
+            f"📉 卖出股票 - {company['name']}\n",
+            f"当前股价: ¥{price}",
+            f"持有数量: {held}股",
+            f"\n请输入卖出数量 (输入0返回):"
+        ]
+        
+        reply = await event.wait_reply("\n".join(lines), timeout=60)
+        if reply is None:
+            return
+        text = reply.get_text().strip()
+        
+        if text == "0":
+            return
+        
+        try:
+            qty = int(text)
+        except ValueError:
+            await event.reply("请输入有效数字")
+            return
+        
+        if qty < 1 or qty > held:
+            await event.reply(f"请输入 1-{held}")
+            return
+        
+        revenue = price * qty
+        self._remove_share(company_id, user_id, qty)
+        self._add_coins(user_id, revenue)
+        
+        stock_data = self._get_stock_data(stock_name)
+        stock_data["volume_sell"] += qty
+        self._set_stock_data(stock_name, stock_data)
+        
+        profit = revenue - qty * company["base_price"]
+        sign = "+" if profit >= 0 else ""
+        
+        await self._send_reply(
+            event,
+            f"✅ 卖出成功！\n\n"
+            f"股票: {stock_name}\n"
+            f"数量: {qty}股\n"
+            f"单价: ¥{price}\n"
+            f"总收入: {revenue} 喵币\n"
+            f"盈亏: {sign}{profit} 喵币",
+            card_type="success"
+        )
