@@ -5798,6 +5798,12 @@ class Main(BaseModule):
     def _set_cooldown(self, user_id: str, action: str):
         self.sdk.storage.set(f"nekocare_{action}_cd:{user_id}", time.time())
     
+    def _check_cooldown(self, user_id: str, action: str, cooldown_period: float) -> bool:
+        last_cd = self._get_cooldown(user_id, action)
+        if last_cd == 0:
+            return True
+        return (time.time() - last_cd) >= cooldown_period
+    
     async def _handle_buy_company_stock(self, event, user_id: str, company_id: str):
         company = self._get_company(company_id)
         if not company or not company.get("listed"):
