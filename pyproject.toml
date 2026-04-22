@@ -1,6 +1,6 @@
 [project]
 name = "ErisPulse-NekoCare"
-version = "2.1.6"
+version = "2.2.0"
 description = "NekoCare - 虚拟猫猫养成模块"
 requires-python = ">=3.10"
 dependencies = []
