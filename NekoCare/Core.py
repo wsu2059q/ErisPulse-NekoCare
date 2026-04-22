@@ -610,6 +610,43 @@ ROB_TARGETS = {
 
 ROB_TARGET_LIST = list(ROB_TARGETS.keys())
 
+MULTIPLAYER_GAMES = {
+    "赛跑": {
+        "min_players": 2,
+        "max_players": 4,
+        "duration": 300,
+        "entry_fee": 10,
+        "reward_multiplier": 2.5,
+    },
+    "捉迷藏": {
+        "min_players": 2,
+        "max_players": 6,
+        "duration": 600,
+        "entry_fee": 5,
+        "reward_multiplier": 2.0,
+    },
+    "打工竞赛": {
+        "min_players": 2,
+        "max_players": 4,
+        "duration": 1800,
+        "entry_fee": 20,
+        "reward_multiplier": 3.0,
+    },
+    "钓鱼比赛": {
+        "min_players": 2,
+        "max_players": 5,
+        "duration": 900,
+        "entry_fee": 15,
+        "reward_multiplier": 2.5,
+    },
+}
+
+MULTIPLAYER_GAME_LIST = list(MULTIPLAYER_GAMES.keys())
+PARTY_MAX_SIZE = 4
+PARTY_EXPIRE = 1800
+FRIEND_REQUEST_EXPIRE = 3600
+GAME_INVITE_EXPIRE = 600
+
 INVEST_TITLE_ACHIEVEMENTS = {
     "invest_profit_500": ("理财圣手", "累计理财净赚500喵币"),
     "invest_profit_2000": ("止盈大师", "累计理财净赚2000喵币"),
@@ -849,6 +886,25 @@ class Main(BaseModule):
         async def help_cmd(cmd_event):
             await self._send_reply(cmd_event, HELP_TEXT, card_type="info")
 
+        @command("喵喵友", help="喵友系统")
+        async def friends_cmd(cmd_event):
+            user_id = cmd_event.get_user_id()
+            self._register_user(user_id, cmd_event.get_user_nickname() or "")
+            await self._handle_friends_menu(cmd_event, user_id)
+
+        @command("喵喵竞赛", help="多人竞赛")
+        async def competition_cmd(cmd_event):
+            user_id = cmd_event.get_user_id()
+            self._register_user(user_id, cmd_event.get_user_nickname() or "")
+            cat_data, status = self._apply_hunger_decay(user_id)
+            if not cat_data:
+                await self._send_reply(cmd_event, "你还没有猫猫呢~去 /猫猫 领养一只吧!")
+                return
+            if status != "alive":
+                await self._send_reply(cmd_event, "猫猫状态不对，无法参加竞赛~")
+                return
+            await self._handle_competition_menu(cmd_event, user_id)
+
         @message.on_message()
         async def greeting_handler(msg_event):
             text = msg_event.get_text().strip()
@@ -994,6 +1050,7 @@ class Main(BaseModule):
                         "公司中心",
                         "其他列表",
                         "救助危急猫猫",
+                        "多人活动",
                     ],
                 )
                 if choice is None or choice == 0:
@@ -1025,6 +1082,164 @@ class Main(BaseModule):
                     await self._handle_other_menu(event, user_id, cat_data)
                 elif choice == 9:
                     await self._handle_rescue_menu(event, user_id)
+                elif choice == 10:
+                    await self._handle_multiplayer_menu(event, user_id, cat_data)
+
+    async def _handle_multiplayer_menu(self, event, user_id, cat_data):
+        while True:
+            friend_count = len(self._get_friends(user_id))
+            header = f"多人活动  喵友:{friend_count}人"
+
+            choice = await event.choose(
+                header,
+                ["返回", "喵友系统", "多人竞赛", "一起喂食", "一起打工"]
+            )
+            if choice is None or choice == 0:
+                return
+            elif choice == 1:
+                await self._handle_friends_menu(event, user_id)
+            elif choice == 2:
+                await self._handle_competition_menu(event, user_id)
+            elif choice == 3:
+                await self._handle_invite_feed(event, user_id, cat_data)
+            elif choice == 4:
+                await self._handle_invite_work(event, user_id, cat_data)
+
+    async def _handle_invite_feed(self, event, user_id, cat_data):
+        friends = self._get_friends(user_id)
+        if not friends:
+            await self._send_reply(
+                event,
+                "你还没有喵友~\n先添加喵友再一起喂食吧!",
+                card_type="warning"
+            )
+            return
+
+        options = ["返回"]
+        for friend_id in friends:
+            friend_nick = self.sdk.storage.get(f"nekocare_nickname:{friend_id}") or friend_id
+            options.append(friend_nick)
+
+        choice = await event.choose("选择喵友一起喂食", options)
+        if choice is None or choice == 0:
+            return
+
+        target_id = friends[choice - 1]
+        target_nick = self.sdk.storage.get(f"nekocare_nickname:{target_id}") or target_id
+
+        target_cat = self._get_cat(target_id)
+        if not target_cat or target_cat.get("status") != "alive":
+            await self._send_reply(
+                event,
+                f"{target_nick} 没有可以喂食的猫猫~",
+                card_type="danger"
+            )
+            return
+
+        feed_fullness = random.randint(3, 8)
+        feed_intimacy = random.randint(1, 3)
+
+        cat_data["fullness"] = min(100, cat_data["fullness"] + feed_fullness)
+        cat_data["intimacy"] = min(100, cat_data["intimacy"] + feed_intimacy)
+        target_cat["fullness"] = min(100, target_cat["fullness"] + feed_fullness)
+        target_cat["intimacy"] = min(100, target_cat["intimacy"] + feed_intimacy)
+
+        self.sdk.storage.set(f"nekocare:{user_id}", cat_data)
+        self.sdk.storage.set(f"nekocare:{target_id}", target_cat)
+
+        url = await self._fetch_image("hug")
+        await self._send_reply(
+            event,
+            f"你和 [{cat_data['name']}] 一起喂 [{target_cat['name']}] ~\n"
+            f"饱食度+{feed_fullness} 亲密度+{feed_intimacy}\n\n"
+            f"[{target_nick}] 的 [{target_cat['name']}] 也吃饱啦!",
+            image_url=url,
+            card_type="success"
+        )
+        await event.reply(f"🎉 {target_nick}，你的猫猫也被喂饱了!")
+
+    async def _handle_invite_work(self, event, user_id, cat_data):
+        friends = self._get_friends(user_id)
+        if not friends:
+            await self._send_reply(
+                event,
+                "你还没有喵友~\n先添加喵友再一起打工吧!",
+                card_type="warning"
+            )
+            return
+
+        options = ["返回"]
+        for friend_id in friends:
+            friend_nick = self.sdk.storage.get(f"nekocare_nickname:{friend_id}") or friend_id
+            options.append(friend_nick)
+
+        choice = await event.choose("选择喵友一起打工", options)
+        if choice is None or choice == 0:
+            return
+
+        target_id = friends[choice - 1]
+        target_nick = self.sdk.storage.get(f"nekocare_nickname:{target_id}") or target_id
+
+        target_cat = self._get_cat(target_id)
+        if not target_cat or target_cat.get("status") != "alive":
+            await self._send_reply(
+                event,
+                f"{target_nick} 没有可以打工的猫猫~",
+                card_type="danger"
+            )
+            return
+
+        now = time.time()
+        last_work = self._get_work_cooldown(user_id)
+        remaining = 1800 - (now - last_work)
+        if remaining > 0:
+            mins = int(remaining // 60) + 1
+            await self._send_reply(event, f"你的猫猫还在休息，{mins}分钟后再来~")
+            return
+
+        if cat_data["fullness"] < 10 or target_cat["fullness"] < 10:
+            await self._send_reply(event, "猫猫太饿了，先喂饱再来~", card_type="danger")
+            return
+
+        job = random.choice(JOBS[0])
+        earnings = random.randint(job["earn_min"], job["earn_max"])
+        target_earnings = random.randint(job["earn_min"], job["earn_max"])
+
+        bonus = 0
+        attrs = self._get_attrs(user_id)
+        target_attrs = self._get_attrs(target_id)
+        stat_val = attrs.get(job.get("stat", "hp"), 0)
+        target_stat_val = target_attrs.get(job.get("stat", "hp"), 0)
+
+        if stat_val >= 60:
+            bonus = int(earnings * 0.15)
+            earnings += bonus
+
+        self._add_coins(user_id, earnings)
+        self._add_coins(target_id, target_earnings)
+        self._set_work_cooldown(user_id)
+
+        my_fullness_loss = random.randint(job["nrg_min"], job["nrg_max"])
+        target_fullness_loss = random.randint(job["nrg_min"], job["nrg_max"])
+
+        cat_data["fullness"] = max(0, cat_data["fullness"] - my_fullness_loss)
+        target_cat["fullness"] = max(0, target_cat["fullness"] - target_fullness_loss)
+
+        self.sdk.storage.set(f"nekocare:{user_id}", cat_data)
+        self.sdk.storage.set(f"nekocare:{target_id}", target_cat)
+
+        self._inc_stat(user_id, "work_count")
+        self._inc_stat(target_id, "work_count")
+
+        url = await self._fetch_image("happy")
+        results = (
+            f"你们一起打工回来啦!\n\n"
+            f"[{cat_data['name']}]: +{earnings}喵币\n"
+            f"[{target_cat['name']}]: +{target_earnings}喵币\n\n"
+            f"团队加成: 合作愉快!"
+        )
+        await self._send_reply(event, results, image_url=url, card_type="success")
+        await event.reply(f"🎉 {target_nick}，你获得了 {target_earnings} 喵币!")
 
     async def _handle_feed_menu(self, event, user_id):
         while True:
@@ -1235,10 +1450,11 @@ class Main(BaseModule):
         while True:
             active_title = self._get_active_title(user_id)
             title_text = f" [{active_title}]" if active_title else ""
-            header = f"当前猫猫: [{cat_data['name']}]{title_text}"
+            friend_count = len(self._get_friends(user_id))
+            header = f"当前猫猫: [{cat_data['name']}]{title_text}\n喵友: {friend_count}人"
 
             choice = await event.choose(
-                header, ["返回", "寄养猫猫", "改名", "查看/设置头衔", "弃养猫猫"]
+                header, ["返回", "寄养猫猫", "改名", "查看/设置头衔", "喵友系统", "弃养猫猫"]
             )
             if choice is None or choice == 0:
                 return
@@ -1249,10 +1465,602 @@ class Main(BaseModule):
             elif choice == 3:
                 await self._handle_titles(event, user_id)
             elif choice == 4:
+                await self._handle_friends_menu(event, user_id)
+            elif choice == 5:
                 if await self._handle_abandon(event, user_id, cat_data):
                     return
 
-    async def _handle_scavenge(self, event, user_id, cat_data=None):
+    async def _handle_friends_menu(self, event, user_id):
+        while True:
+            friends = self._get_friends(user_id)
+            requests = self._get_friend_requests(user_id)
+            request_count = len(requests)
+            header = f"喵友系统  喵友:{len(friends)}人"
+            if request_count > 0:
+                header += f"  请求:{request_count}人"
+
+            choice = await event.choose(
+                header,
+                ["返回", "查看喵友", "添加喵友", "删除喵友", f"好友请求({request_count})", "竞赛大厅"]
+            )
+            if choice is None or choice == 0:
+                return
+            elif choice == 1:
+                await self._handle_list_friends(event, user_id)
+            elif choice == 2:
+                await self._handle_add_friend(event, user_id)
+            elif choice == 3:
+                await self._handle_remove_friend(event, user_id)
+            elif choice == 4:
+                await self._handle_friend_requests(event, user_id)
+            elif choice == 5:
+                await self._handle_competition_menu(event, user_id)
+
+    async def _handle_list_friends(self, event, user_id):
+        friends = self._get_friends(user_id)
+        if not friends:
+            await self._send_reply(event, "你还没有喵友呢~\n输入 2 添加喵友吧!", card_type="info")
+            return
+
+        lines = ["你的喵友\n"]
+        for i, friend_id in enumerate(friends, 1):
+            friend_nick = self.sdk.storage.get(f"nekocare_nickname:{friend_id}") or friend_id
+            friend_cat = self._get_cat(friend_id)
+            cat_status = friend_cat["status"] if friend_cat else "无猫"
+            cat_name = friend_cat["name"] if friend_cat else "-"
+            lines.append(f"{i}. {friend_nick} | {cat_name} [{cat_status}]")
+
+        await self._send_reply(event, "\n".join(lines), card_type="info")
+
+    async def _handle_add_friend(self, event, user_id):
+        reply = await event.wait_reply("请 @你想加为喵友的用户 (或输入用户ID):", timeout=60)
+        if not reply:
+            return
+
+        mentions = reply.get_mentions()
+        target_id = mentions[0] if mentions else reply.get_text().strip()
+        if not target_id:
+            await self._send_reply(event, "已取消")
+            return
+
+        if target_id == user_id:
+            await self._send_reply(event, "不能加自己为喵友!")
+            return
+
+        if self._is_friend(user_id, target_id):
+            await self._send_reply(event, "这个人已经是你的喵友了!")
+            return
+
+        target_nick = self.sdk.storage.get(f"nekocare_nickname:{target_id}") or target_id
+        if self._add_friend_request(user_id, target_id):
+            await self._send_reply(
+                event,
+                f"已向 {target_nick} 发送好友请求~\n等待对方同意，就能一起玩了!",
+                card_type="success"
+            )
+        else:
+            await self._send_reply(event, "你已经给TA发过请求了，等待同意~", card_type="warning")
+
+    async def _handle_remove_friend(self, event, user_id):
+        friends = self._get_friends(user_id)
+        if not friends:
+            await self._send_reply(event, "你还没有喵友呢!", card_type="info")
+            return
+
+        options = ["返回"]
+        for friend_id in friends:
+            friend_nick = self.sdk.storage.get(f"nekocare_nickname:{friend_id}") or friend_id
+            options.append(friend_nick)
+
+        choice = await event.choose("删除喵友", options)
+        if choice is None or choice == 0:
+            return
+
+        target_id = friends[choice - 1]
+        target_nick = self.sdk.storage.get(f"nekocare_nickname:{target_id}") or target_id
+
+        if self._remove_friend(user_id, target_id):
+            self._remove_friend(target_id, user_id)
+            await self._send_reply(event, f"已删除喵友 {target_nick}", card_type="success")
+
+    async def _handle_friend_requests(self, event, user_id):
+        requests = self._get_friend_requests(user_id)
+        if not requests:
+            await self._send_reply(event, "没有新的好友请求~", card_type="info")
+            return
+
+        now = time.time()
+        valid_requests = []
+        for req in requests:
+            if now - req["time"] < FRIEND_REQUEST_EXPIRE:
+                valid_requests.append(req)
+
+        if not valid_requests:
+            await self._send_reply(event, "没有新的好友请求~", card_type="info")
+            return
+
+        self.sdk.storage.set(f"nekocare_friend_requests:{user_id}", valid_requests)
+
+        options = ["返回"]
+        for req in valid_requests:
+            from_id = req["from"]
+            from_nick = self.sdk.storage.get(f"nekocare_nickname:{from_id}") or from_id
+            options.append(from_nick)
+
+        choice = await event.choose(f"好友请求 ({len(valid_requests)}人)", options)
+        if choice is None or choice == 0:
+            return
+
+        target_id = valid_requests[choice - 1]["from"]
+        target_nick = self.sdk.storage.get(f"nekocare_nickname:{target_id}") or target_id
+
+        await event.reply(f"1. 同意  2. 拒绝  0. 返回")
+        reply = await event.wait_reply(f"是否同意 {target_nick} 的好友请求?", timeout=30)
+        if not reply:
+            return
+
+        text = reply.get_text().strip()
+        if text == "1":
+            if self._is_friend(user_id, target_id):
+                await self._send_reply(event, "你们已经是好友了~", card_type="info")
+            else:
+                self._add_friend(user_id, target_id)
+                self._add_friend(target_id, user_id)
+                await self._send_reply(
+                    event,
+                    f"已同意 {target_nick} 的请求!\n现在你们是喵友了~",
+                    card_type="success"
+                )
+                await event.reply(f"🎉 你和 {target_nick} 成为喵友了!")
+        elif text == "2":
+            await self._send_reply(event, "已拒绝请求", card_type="info")
+        else:
+            return
+
+    async def _handle_competition_menu(self, event, user_id):
+        cat_data, status = self._apply_hunger_decay(user_id)
+        if not cat_data or status != "alive":
+            await self._send_reply(event, "你需要有一只活着的猫猫才能参加竞赛!", card_type="danger")
+            return
+
+        coins = self._get_coins(user_id)
+        friends = self._get_friends(user_id)
+        party = self._get_party(user_id)
+        party_info = ""
+        if party:
+            member_count = len(party["members"])
+            party_info = f"\n当前队伍: {member_count}/{PARTY_MAX_SIZE}人"
+
+        header = f"多人竞赛  喵币:{coins}\n 喵友: {len(friends)}人{party_info}"
+
+        choice = await event.choose(
+            header,
+            ["返回", "队伍(组队)", "快速开始", "我的竞赛"]
+        )
+        if choice is None or choice == 0:
+            return
+        elif choice == 1:
+            await self._handle_party_menu(event, user_id, cat_data)
+        elif choice == 2:
+            await self._handle_quick_start(event, user_id, cat_data)
+        elif choice == 3:
+            await self._handle_my_competitions(event, user_id, cat_data)
+
+    async def _handle_create_competition(self, event, user_id, cat_data):
+        options = ["返回"]
+        for game in MULTIPLAYER_GAME_LIST:
+            config = MULTIPLAYER_GAMES[game]
+            options.append(f"{game} (押金{config['entry_fee']}喵币)")
+
+        choice = await event.choose("选择竞赛类型", options)
+        if choice is None or choice == 0:
+            return
+
+        game_type = MULTIPLAYER_GAME_LIST[choice - 1]
+        config = MULTIPLAYER_GAMES[game_type]
+        entry_fee = config["entry_fee"]
+
+        coins = self._get_coins(user_id)
+        if coins < entry_fee:
+            await self._send_reply(
+                event,
+                f"押金不足! 需要 {entry_fee} 喵币，你只有 {coins} 喵币",
+                card_type="danger"
+            )
+            return
+
+        invites = self._get_game_invites(game_type)
+        for inv in invites:
+            if inv["host_id"] == user_id:
+                await self._send_reply(event, "你已经在竞赛中了!", card_type="warning")
+                return
+
+        self._add_coins(user_id, -entry_fee)
+        self._create_game_invite(user_id, game_type, {
+            "game_type": game_type,
+            "entry_fee": entry_fee,
+            "cat_data": cat_data
+        })
+
+        friends = self._get_friends(user_id)
+        invite_text = f"你创建了【{game_type}】竞赛!\n押金: {entry_fee} 喵币\n\n"
+        if friends:
+            invite_text += "请你的喵友使用 /喵喵竞赛 → 加入竞赛 来参加!"
+        else:
+            invite_text += "建议先添加喵友后再创建竞赛~"
+
+        await self._send_reply(event, invite_text, card_type="success")
+
+    async def _handle_join_competition(self, event, user_id, cat_data):
+        has_open = False
+        all_games = []
+
+        for game_type in MULTIPLAYER_GAME_LIST:
+            invites = self._get_game_invites(game_type)
+            for inv in invites:
+                if user_id not in inv["players"] and inv["expire"] > time.time():
+                    has_open = True
+                    all_games.append((game_type, inv))
+
+        if not has_open:
+            await self._send_reply(event, "当前没有可加入的竞赛~", card_type="info")
+            return
+
+        options = ["返回"]
+        for game_type, inv in all_games:
+            host_id = inv["host_id"]
+            host_nick = self.sdk.storage.get(f"nekocare_nickname:{host_id}") or host_id
+            player_count = len(inv["players"])
+            config = MULTIPLAYER_GAMES[game_type]
+            options.append(f"{game_type} | {host_nick} | {player_count}/{config['max_players']}人")
+
+        choice = await event.choose("可加入的竞赛", options)
+        if choice is None or choice == 0:
+            return
+
+        game_type, invite = all_games[choice - 1]
+        config = MULTIPLAYER_GAMES[game_type]
+        entry_fee = config["entry_fee"]
+
+        coins = self._get_coins(user_id)
+        if coins < entry_fee:
+            await self._send_reply(
+                event,
+                f"押金不足! 需要 {entry_fee} 喵币，你只有 {coins} 喵币",
+                card_type="danger"
+            )
+            return
+
+        result = self._join_game(game_type, user_id)
+        if result:
+            self._add_coins(user_id, -entry_fee)
+            await self._send_reply(
+                event,
+                f"已加入【{game_type}】竞赛!\n当前玩家: {len(result['players'])}人",
+                card_type="success"
+            )
+            host_nick = self.sdk.storage.get(f"nekocare_nickname:{invite['host_id']}") or invite['host_id']
+            await event.reply(f"🎉 {host_nick} 发起了一场 {game_type}，你已加入!")
+        else:
+            await self._send_reply(event, "加入失败，可能人满或已过期~", card_type="danger")
+
+    async def _handle_my_competitions(self, event, user_id, cat_data):
+        all_my_games = []
+
+        for game_type in MULTIPLAYER_GAME_LIST:
+            invites = self._get_game_invites(game_type)
+            for inv in invites:
+                if user_id in inv["players"]:
+                    all_my_games.append((game_type, inv))
+
+        if not all_my_games:
+            await self._send_reply(event, "你还没有参加任何竞赛~", card_type="info")
+            return
+
+        options = ["返回"]
+        for game_type, inv in all_my_games:
+            host_nick = self.sdk.storage.get(f"nekocare_nickname:{inv['host_id']}") or inv['host_id']
+            is_host = inv["host_id"] == user_id
+            status = "房主" if is_host else "玩家"
+            player_count = len(inv["players"])
+            config = MULTIPLAYER_GAMES[game_type]
+            options.append(f"{game_type} | {host_nick}({status}) | {player_count}/{config['max_players']}人")
+
+        choice = await event.choose("我的竞赛", options)
+        if choice is None or choice == 0:
+            return
+
+        game_type, invite = all_my_games[choice - 1]
+        is_host = invite["host_id"] == user_id
+        config = MULTIPLAYER_GAMES[game_type]
+        player_count = len(invite["players"])
+
+        if is_host:
+            if player_count >= config["min_players"]:
+                await self._run_competition(event, user_id, game_type, invite)
+                return
+
+            await event.reply(
+                f"当前 {player_count} 人，需要至少 {config['min_players']} 人\n"
+                f"1. 立即开始  2. 等待更多玩家  0. 返回"
+            )
+            reply = await event.wait_reply(
+                f"人数不足，是否立即开始?(押金不退)", timeout=30
+            )
+            if reply:
+                text = reply.get_text().strip()
+                if text == "1":
+                    await self._run_competition(event, user_id, game_type, invite)
+                elif text == "2":
+                    return
+        else:
+            host_nick = self.sdk.storage.get(f"nekocare_nickname:{invite['host_id']}") or invite['host_id']
+            await self._send_reply(
+                event,
+                f"你是玩家，等待房主 {host_nick} 开始游戏~\n当前 {player_count}/{config['max_players']} 人",
+                card_type="info"
+            )
+
+    async def _run_competition(self, event, host_id, game_type, invite):
+        game_config = MULTIPLAYER_GAMES[game_type]
+        players = invite["players"]
+        entry_fee = game_config["entry_fee"]
+        reward = int(entry_fee * game_config["reward_multiplier"])
+
+        results = [f"=== {game_type} 结果 ===\n"]
+        player_results = {}
+
+        for player_id in players:
+            cat = self._get_cat(player_id)
+            if cat and cat.get("status") == "alive":
+                if game_type == "赛跑":
+                    score = random.randint(1, 100) + random.randint(0, 30)
+                elif game_type == "捉迷藏":
+                    score = random.randint(1, 100) + random.randint(0, 20)
+                elif game_type == "打工竞赛":
+                    job = random.choice(JOBS[0])
+                    score = random.randint(job["earn_min"], job["earn_max"]) * 3
+                elif game_type == "钓鱼比赛":
+                    score = random.randint(5, 50)
+                else:
+                    score = random.randint(1, 100)
+
+                player_results[player_id] = score
+
+        if not player_results:
+            for player_id in players:
+                self._add_coins(player_id, entry_fee)
+
+            await self._send_reply(event, "没有玩家完成任务，退还押金~", card_type="warning")
+            return
+
+        sorted_results = sorted(player_results.items(), key=lambda x: x[1], reverse=True)
+
+        rewards = {0: reward, 1: int(reward * 0.6), 2: int(reward * 0.3)}
+        medals = {0: "🥇", 1: "🥈", 2: "🥉"}
+
+        for i, (player_id, score) in enumerate(sorted_results):
+            nick = self.sdk.storage.get(f"nekocare_nickname:{player_id}") or player_id
+            cat = self._get_cat(player_id)
+            cat_name = cat["name"] if cat else "?"
+            medal = medals.get(i, f"{i + 1}.")
+            prize = rewards.get(i, 0)
+
+            self._add_coins(player_id, prize)
+            self._inc_stat(player_id, "contest_count")
+
+            results.append(f"{medal} {nick} | {cat_name} | {score}分 | +{prize}喵币")
+
+        await self._send_reply(event, "\n".join(results), card_type="success")
+
+        game_invites = self._get_game_invites(game_type)
+        game_invites = [inv for inv in game_invites if inv["host_id"] != host_id or set(inv["players"]) != set(players)]
+        self.sdk.storage.set(f"nekocare_game_invites:{game_type}", game_invites)
+
+    async def _handle_party_menu(self, event, user_id, cat_data):
+        while True:
+            party = self._get_party(user_id)
+            friends = self._get_friends(user_id)
+
+            if party:
+                member_list = []
+                for mid in party["members"]:
+                    nick = self.sdk.storage.get(f"nekocare_nickname:{mid}") or mid
+                    cat_name = party["cat_names"].get(mid, "?")
+                    is_host = "⭐" if mid == party["host_id"] else ""
+                    member_list.append(f"{nick}({cat_name}){is_host}")
+                member_text = "\n".join(member_list)
+                header = f"队伍(组队)\n{member_text}"
+                options = ["返回", "快速开始", "离开队伍"]
+            else:
+                header = "队伍(组队)\n你还没有队伍"
+                options = ["返回", "创建队伍", "加入队伍"]
+
+            choice = await event.choose(header, options)
+            if choice is None or choice == 0:
+                return
+
+            if party:
+                if choice == 1:
+                    await self._handle_quick_race(event, user_id, cat_data)
+                elif choice == 2:
+                    await self._handle_leave_party(event, user_id)
+            else:
+                if choice == 1:
+                    await self._handle_create_party(event, user_id, cat_data)
+                elif choice == 2:
+                    await self._handle_join_party_menu(event, user_id, cat_data)
+
+    async def _handle_create_party(self, event, user_id, cat_data):
+        self._create_party(user_id, cat_data)
+        host_nick = self.sdk.storage.get(f"nekocare_nickname:{user_id}") or user_id
+        await self._send_reply(event, f"队伍创建成功!\n队长: {host_nick}\n\n让喵友使用 /喵喵竞赛 → 队伍(组队) → 加入队伍 来加入!", card_type="success")
+
+    async def _handle_join_party_menu(self, event, user_id, cat_data):
+        all_parties = self._get_all_parties()
+        available = []
+        for p in all_parties:
+            if len(p["members"]) < PARTY_MAX_SIZE and user_id not in p["members"]:
+                if time.time() - p.get("created", 0) <= PARTY_EXPIRE:
+                    available.append(p)
+
+        if not available:
+            await self._send_reply(event, "当前没有可加入的队伍~\n让喵友先创建队伍吧!", card_type="info")
+            return
+
+        options = ["返回"]
+        for p in available:
+            host_nick = self.sdk.storage.get(f"nekocare_nickname:{p['host_id']}") or p["host_id"]
+            options.append(f"{host_nick} ({len(p['members'])}/{PARTY_MAX_SIZE})")
+
+        choice = await event.choose("可加入的队伍", options)
+        if choice is None or choice == 0:
+            return
+
+        party = available[choice - 1]
+        host_id = party["host_id"]
+        self._join_party(host_id, user_id, cat_data)
+
+        host_nick = self.sdk.storage.get(f"nekocare_nickname:{host_id}") or host_id
+        await self._send_reply(event, f"已加入 {host_nick} 的队伍!", card_type="success")
+
+    async def _handle_invite_party(self, event, user_id, cat_data):
+        party = self._get_party(user_id)
+        if not party:
+            await self._send_reply(event, "你还没有队伍，先创建一个吧!", card_type="warning")
+            return
+
+        friends = self._get_friends(user_id)
+        if not friends:
+            await self._send_reply(event, "你还没有喵友，先添加喵友吧!", card_type="warning")
+            return
+
+        members = set(party["members"])
+        available = [f for f in friends if f not in members]
+        if not available:
+            await self._send_reply(event, "所有喵友都已在队伍中!", card_type="info")
+            return
+
+        options = ["返回"]
+        for friend_id in available:
+            nick = self.sdk.storage.get(f"nekocare_nickname:{friend_id}") or friend_id
+            options.append(nick)
+
+        choice = await event.choose("邀请喵友加入队伍", options)
+        if choice is None or choice == 0:
+            return
+
+        target_id = available[choice - 1]
+        target_nick = self.sdk.storage.get(f"nekocare_nickname:{target_id}") or target_id
+
+        host_nick = self.sdk.storage.get(f"nekocare_nickname:{user_id}") or user_id
+        await event.reply(f"邀请已发送给 {target_nick}!")
+        await self._send_reply(event, f"⭐ {host_nick} 邀请你加入队伍!\n1. 加入  0. 拒绝", card_type="info")
+
+    async def _handle_leave_party(self, event, user_id):
+        party = self._get_party(user_id)
+        if not party:
+            await self._send_reply(event, "你不在队伍中!", card_type="warning")
+            return
+
+        self._leave_party(user_id)
+        await self._send_reply(event, "已离开队伍!", card_type="info")
+
+    async def _handle_quick_start(self, event, user_id, cat_data):
+        party = self._get_party(user_id)
+        if not party:
+            await self._send_reply(event, "你还没有队伍!\n先创建一个队伍，然后邀请喵友加入吧~", card_type="warning")
+            return
+
+        config = MULTIPLAYER_GAMES["打工竞赛"]
+        entry_fee = config["entry_fee"]
+        total_fee = entry_fee * len(party["members"])
+
+        coins = self._get_coins(user_id)
+        if coins < total_fee:
+            await self._send_reply(event, f"押金不足! 需要 {total_fee} 喵币，你只有 {coins} 喵币", card_type="danger")
+            return
+
+        await self._run_party_competition(event, user_id, cat_data, party, "打工竞赛")
+
+    async def _handle_quick_race(self, event, user_id, cat_data):
+        party = self._get_party(user_id)
+        if not party:
+            await self._send_reply(event, "你还没有队伍!\n先创建一个队伍吧~", card_type="warning")
+            return
+
+        options = ["返回", "赛跑", "捉迷藏", "打工竞赛", "钓鱼比赛"]
+        choice = await event.choose("选择游戏", options)
+        if choice is None or choice == 0:
+            return
+
+        game_type = MULTIPLAYER_GAME_LIST[choice - 1]
+        config = MULTIPLAYER_GAMES[game_type]
+        entry_fee = config["entry_fee"]
+        total_fee = entry_fee * len(party["members"])
+
+        coins = self._get_coins(user_id)
+        if coins < total_fee:
+            await self._send_reply(event, f"押金不足! 需要 {total_fee} 喵币，你只有 {coins} 喵币", card_type="danger")
+            return
+
+        await self._run_party_competition(event, user_id, cat_data, party, game_type)
+
+    async def _run_party_competition(self, event, user_id, cat_data, party, game_type):
+        game_config = MULTIPLAYER_GAMES[game_type]
+        players = party["members"]
+        entry_fee = game_config["entry_fee"]
+        total_fee = entry_fee * len(players)
+        reward = int(entry_fee * game_config["reward_multiplier"])
+
+        for p in players:
+            self._add_coins(p, -entry_fee)
+
+        results = [f"=== {game_type} 组队赛 ===\n"]
+        player_results = {}
+
+        for player_id in players:
+            cat = self._get_cat(player_id)
+            if cat and cat.get("status") == "alive":
+                if game_type == "赛跑":
+                    score = random.randint(1, 100) + random.randint(0, 30)
+                elif game_type == "捉迷藏":
+                    score = random.randint(1, 100) + random.randint(0, 20)
+                elif game_type == "打工竞赛":
+                    job = random.choice(JOBS[0])
+                    score = random.randint(job["earn_min"], job["earn_max"]) * 3
+                elif game_type == "钓鱼比赛":
+                    score = random.randint(5, 50)
+                else:
+                    score = random.randint(1, 100)
+
+                player_results[player_id] = score
+
+        if not player_results:
+            for player_id in players:
+                self._add_coins(player_id, entry_fee)
+            await self._send_reply(event, "没有玩家完成游戏，退还押金~", card_type="warning")
+            return
+
+        sorted_results = sorted(player_results.items(), key=lambda x: x[1], reverse=True)
+        rewards = {0: reward, 1: int(reward * 0.6), 2: int(reward * 0.3)}
+        medals = {0: "🥇", 1: "🥈", 2: "🥉"}
+
+        for i, (player_id, score) in enumerate(sorted_results):
+            nick = self.sdk.storage.get(f"nekocare_nickname:{player_id}") or player_id
+            cat = self._get_cat(player_id)
+            cat_name = cat["name"] if cat else "?"
+            medal = medals.get(i, f"{i + 1}.")
+            prize = rewards.get(i, 0)
+
+            self._add_coins(player_id, prize)
+            self._inc_stat(player_id, "contest_count")
+
+            results.append(f"{medal} {nick} | {cat_name} | {score}分 | +{prize}喵币")
+
+        await self._send_reply(event, "\n".join(results), card_type="success")
+
+    async def _handle_scavenge(self, event, user_id):
         cat_data, status = self._apply_hunger_decay(user_id)
         if not cat_data:
             await self._send_reply(event, "你还没有猫猫呢~", card_type="danger")
@@ -4159,6 +4967,162 @@ class Main(BaseModule):
         stats = self._get_stats(user_id)
         stats[name] = stats.get(name, 0) + amount
         self.sdk.storage.set(f"nekocare_stats:{user_id}", stats)
+
+    def _get_friends(self, user_id: str) -> list:
+        friends = self.sdk.storage.get(f"nekocare_friends:{user_id}")
+        return friends if friends is not None else []
+
+    def _add_friend(self, user_id: str, friend_id: str) -> bool:
+        friends = self._get_friends(user_id)
+        if friend_id not in friends:
+            friends.append(friend_id)
+            self.sdk.storage.set(f"nekocare_friends:{user_id}", friends)
+            return True
+        return False
+
+    def _remove_friend(self, user_id: str, friend_id: str) -> bool:
+        friends = self._get_friends(user_id)
+        if friend_id in friends:
+            friends.remove(friend_id)
+            self.sdk.storage.set(f"nekocare_friends:{user_id}", friends)
+            return True
+        return False
+
+    def _get_friend_requests(self, user_id: str) -> list:
+        requests = self.sdk.storage.get(f"nekocare_friend_requests:{user_id}")
+        return requests if requests is not None else []
+
+    def _add_friend_request(self, from_id: str, to_id: str) -> bool:
+        requests = self._get_friend_requests(to_id)
+        for req in requests:
+            if req["from"] == from_id:
+                return False
+        now = time.time()
+        requests.append({"from": from_id, "time": now})
+        self.sdk.storage.set(f"nekocare_friend_requests:{to_id}", requests)
+        return True
+
+    def _remove_friend_request(self, from_id: str, to_id: str) -> bool:
+        requests = self._get_friend_requests(to_id)
+        original_len = len(requests)
+        requests = [r for r in requests if r["from"] != from_id]
+        if len(requests) != original_len:
+            self.sdk.storage.set(f"nekocare_friend_requests:{to_id}", requests)
+            return True
+        return False
+
+    def _is_friend(self, user_id: str, other_id: str) -> bool:
+        friends = self._get_friends(user_id)
+        return other_id in friends
+
+    def _get_party(self, user_id: str) -> Optional[dict]:
+        parties = self._get_all_parties()
+        for party in parties:
+            if user_id in party["members"]:
+                if time.time() - party.get("created", 0) > PARTY_EXPIRE:
+                    self._remove_party(party["host_id"])
+                    return None
+                return party
+        return None
+
+    def _get_all_parties(self) -> list:
+        parties = self.sdk.storage.get("nekocare_parties")
+        return parties if parties is not None else []
+
+    def _create_party(self, host_id: str, cat_data: dict) -> dict:
+        party = {
+            "host_id": host_id,
+            "members": [host_id],
+            "cat_names": {host_id: cat_data.get("name", "?")},
+            "created": time.time()
+        }
+        parties = self._get_all_parties()
+        parties = [p for p in parties if p["host_id"] != host_id]
+        parties.append(party)
+        self.sdk.storage.set("nekocare_parties", parties)
+        return party
+
+    def _join_party(self, host_id: str, user_id: str, cat_data: dict) -> bool:
+        parties = self._get_all_parties()
+        for party in parties:
+            if party["host_id"] == host_id:
+                if len(party["members"]) >= PARTY_MAX_SIZE:
+                    return False
+                if user_id not in party["members"]:
+                    party["members"].append(user_id)
+                    party["cat_names"][user_id] = cat_data.get("name", "?")
+                    party["created"] = time.time()
+                    self.sdk.storage.set("nekocare_parties", parties)
+                return True
+        return False
+
+    def _leave_party(self, user_id: str) -> bool:
+        party = self._get_party(user_id)
+        if not party:
+            return False
+        party["members"].remove(user_id)
+        party["cat_names"].pop(user_id, None)
+        if not party["members"]:
+            self._remove_party(party["host_id"])
+        else:
+            if user_id == party["host_id"] and party["members"]:
+                party["host_id"] = party["members"][0]
+            parties = self._get_all_parties()
+            for i, p in enumerate(parties):
+                if p["host_id"] == party["host_id"]:
+                    parties[i] = party
+                    break
+            self.sdk.storage.set("nekocare_parties", parties)
+        return True
+
+    def _remove_party(self, host_id: str):
+        parties = self._get_all_parties()
+        parties = [p for p in parties if p["host_id"] != host_id]
+        self.sdk.storage.set("nekocare_parties", parties)
+
+    def _get_party_members(self, host_id: str) -> list:
+        party = self._get_party(host_id)
+        return party["members"] if party else []
+
+    def _get_game_invites(self, game_type: str) -> list:
+        invites = self.sdk.storage.get(f"nekocare_game_invites:{game_type}")
+        return invites if invites is not None else []
+
+    def _create_game_invite(self, host_id: str, game_type: str, invite_data: dict):
+        invites = self._get_game_invites(game_type)
+        now = time.time()
+        invites.append({
+            "host_id": host_id,
+            "players": [host_id],
+            "created": now,
+            "expire": now + GAME_INVITE_EXPIRE,
+            **invite_data
+        })
+        self.sdk.storage.set(f"nekocare_game_invites:{game_type}", invites)
+
+    def _join_game(self, game_type: str, player_id: str) -> Optional[dict]:
+        invites = self._get_game_invites(game_type)
+        now = time.time()
+        for invite in invites:
+            if player_id in invite["players"]:
+                return None
+            if invite["expire"] < now:
+                continue
+            game_config = MULTIPLAYER_GAMES[game_type]
+            if len(invite["players"]) >= game_config["max_players"]:
+                continue
+            invite["players"].append(player_id)
+            self.sdk.storage.set(f"nekocare_game_invites:{game_type}", invites)
+            return invite
+        return None
+
+    def _cleanup_expired_game_invites(self):
+        now = time.time()
+        for game_type in MULTIPLAYER_GAME_LIST:
+            invites = self._get_game_invites(game_type)
+            valid_invites = [inv for inv in invites if inv["expire"] > now]
+            if len(valid_invites) != len(invites):
+                self.sdk.storage.set(f"nekocare_game_invites:{game_type}", valid_invites)
 
     def _register_user(self, user_id: str, nickname: str = ""):
         users = self.sdk.storage.get("nekocare_user_registry")
