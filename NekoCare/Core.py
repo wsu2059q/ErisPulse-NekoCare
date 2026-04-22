@@ -403,12 +403,15 @@ COMPANY_DIVIDEND_CYCLE = 2592000
 COMPANY_MAX_COMPANIES_PER_USER = 2
 
 JOB_POSITIONS = {
-    1: {"name": "实习生", "salary": 50, "req_edu": 0},
-    2: {"name": "员工", "salary": 80, "req_edu": 1},
-    3: {"name": "专员", "salary": 120, "req_edu": 2},
-    4: {"name": "主管", "salary": 160, "req_edu": 3},
-    5: {"name": "经理", "salary": 200, "req_edu": 4},
+    1: {"name": "实习生", "salary": 50, "req_edu": 0, "max_employees": 5},
+    2: {"name": "员工", "salary": 80, "req_edu": 1, "max_employees": 4},
+    3: {"name": "专员", "salary": 120, "req_edu": 2, "max_employees": 3},
+    4: {"name": "主管", "salary": 160, "req_edu": 3, "max_employees": 2},
+    5: {"name": "经理", "salary": 200, "req_edu": 4, "max_employees": 1},
 }
+
+COMPANY_SALARY_INTERVAL = 86400
+COMPANY_MAX_POSITIONS_PER_COMPANY = 3
 
 BANK_INTEREST_REGULAR = 0.03
 BANK_INTEREST_FIXED = 0.08
@@ -4761,7 +4764,7 @@ class Main(BaseModule):
     
     async def _handle_company_menu(self, event, user_id):
         while True:
-            lines = ["🏢 公司中心\n"]
+            lines = ["公司中心\n"]
             company_ids = self._get_user_company_ids(user_id)
             
             if company_ids:
@@ -4769,7 +4772,7 @@ class Main(BaseModule):
                 for i, company_id in enumerate(company_ids, 1):
                     company = self._get_company(company_id)
                     if company:
-                        status = "📈 已上市" if company.get("listed") else "📊 未上市"
+                        status = "已上市" if company.get("listed") else "未上市"
                         lines.append(f"{i}. {company['name']} ({company['type']}) {status}")
                 lines.append(f"\n{len(company_ids) + 1}. 管理公司\n")
             else:
@@ -4818,7 +4821,7 @@ class Main(BaseModule):
             )
             return
         
-        lines = ["📝 注册新公司\n"]
+        lines = ["注册新公司\n"]
         lines.append("选择公司类型：\n")
         for key, data in COMPANY_TYPES.items():
             lines.append(f"{key}. {data['name']} - 注册费:{data['fee']} 喵币")
@@ -4923,44 +4926,44 @@ class Main(BaseModule):
         days_registered = int((time.time() - company["registered_time"]) / 86400)
         
         lines = [
-            f"🏢 {company['name']}\n",
+            f"  {company['name']}\n",
             f"类型: {type_data['name']}",
             f"等级: {company['level']}/{COMPANY_MAX_LEVEL}",
             f"成立天数: {days_registered}天",
-            f"\n💰 财务状况",
+            f"\n 财务状况",
             f"现金: {company['cash']} 喵币",
             f"累计收入: {company['revenue']} 喵币",
             f"累计利润: {company['profit']} 喵币",
-            f"\n📊 公司规模",
+            f"\n  公司规模",
             f"员工数量: {len(company['employees'])}人",
         ]
         
         if company["listed"]:
-            lines.append(f"\n📈 上市状态: 已上市")
+            lines.append(f"\n  上市状态: 已上市")
             lines.append(f"总股本: {company['total_shares']}股")
             lines.append(f"当前股价: ¥{company['share_price']}")
         else:
-            lines.append(f"\n📊 上市状态: 未上市")
+            lines.append(f"\n  上市状态: 未上市")
             days_to_ipo = max(0, COMPANY_IPO_DAYS - days_registered)
             if days_to_ipo > 0:
                 lines.append(f"距离上市条件（时间）: {days_to_ipo}天")
             else:
-                lines.append(f"✅ 时间条件已满足")
+                lines.append(f"√ 时间条件已满足")
             
-            profit_ready = "✅" if company["profit"] >= COMPANY_IPO_MIN_PROFIT else "❌"
+            profit_ready = "√" if company["profit"] >= COMPANY_IPO_MIN_PROFIT else "×"
             lines.append(f"累计利润要求: {profit_ready} ({company['profit']}/{COMPANY_IPO_MIN_PROFIT})")
             
-            cash_ready = "✅" if company["cash"] >= COMPANY_IPO_MIN_CASH else "❌"
+            cash_ready = "√" if company["cash"] >= COMPANY_IPO_MIN_CASH else "×"
             lines.append(f"现金要求: {cash_ready} ({company['cash']}/{COMPANY_IPO_MIN_CASH})")
             
-            level_ready = "✅" if company["level"] >= COMPANY_IPO_MIN_LEVEL else "❌"
+            level_ready = "√" if company["level"] >= COMPANY_IPO_MIN_LEVEL else "×"
             lines.append(f"公司等级要求: {level_ready} ({company['level']}/{COMPANY_IPO_MIN_LEVEL})")
             
             if (days_to_ipo == 0 and 
                 company["profit"] >= COMPANY_IPO_MIN_PROFIT and 
                 company["cash"] >= COMPANY_IPO_MIN_CASH and 
                 company["level"] >= COMPANY_IPO_MIN_LEVEL):
-                lines.append(f"\n🎯 满足上市条件！可以申请上市")
+                lines.append(f"\n  满足上市条件！可以申请上市")
         
         await event.reply("\n".join(lines))
     
@@ -5001,7 +5004,7 @@ class Main(BaseModule):
         
         while True:
             lines = [
-                f"🏢 管理中心 - {company['name']}\n",
+                f" 管理中心 - {company['name']}\n",
                 f"现金: {company['cash']} 喵币",
                 f"员工: {len(company['employees'])}人",
                 f"\n1. 公司详情",
@@ -5047,7 +5050,7 @@ class Main(BaseModule):
     
     async def _handle_company_ipo(self, event, company_id: str, company: dict):
         lines = [
-            f"📈 申请上市 - {company['name']}\n",
+            f"申请上市 - {company['name']}\n",
             f"上市费用: {COMPANY_IPO_FEE} 喵币",
             f"公司现金: {company['cash']} 喵币",
             f"\n确定要申请上市吗？（y/n）"
@@ -5259,66 +5262,86 @@ class Main(BaseModule):
     async def _handle_recruit_employees(self, event, company_id: str, company: dict):
         while True:
             lines = [
-                f"👥 招聘管理 - {company['name']}\n",
+                f"招聘管理 - {company['name']}\n",
                 f"当前员工: {len(company['employees'])}人",
                 f"\n1. 发布招聘信息",
                 f"2. 查看申请列表",
                 f"3. 查看员工列表",
+                f"4. 员工管理（工资/劝退）",
                 f"\n0. 返回"
             ]
-            
+
             reply = await event.wait_reply("\n".join(lines), timeout=60)
             if reply is None:
                 return
             text = reply.get_text().strip()
-            
+
             if text == "0":
                 return
             elif text == "1":
                 await self._handle_post_job(event, company_id, company)
+                company = self._get_company(company_id)
             elif text == "2":
                 await self._handle_view_applications(event, company_id, company)
                 company = self._get_company(company_id)
             elif text == "3":
-                await self._handle_view_employees(event, company)
+                await self._handle_view_employees(event, company_id, company)
+                company = self._get_company(company_id)
+            elif text == "4":
+                await self._handle_employee_menu(event, company_id, company)
+                company = self._get_company(company_id)
             else:
                 await event.reply("无效编号")
     
     async def _handle_post_job(self, event, company_id: str, company: dict):
         lines = [
-            f"📢 发布招聘 - {company['name']}\n",
+            f"发布招聘 - {company['name']}\n",
             f"选择职位等级：\n"
         ]
-        
+
         for level, position in JOB_POSITIONS.items():
             lines.append(f"{level}. {position['name']} - 薪资: {position['salary']} 喵币/次")
-        
+
         lines.append("\n输入职位等级 (输入0取消):")
-        
+
         reply = await event.wait_reply("\n".join(lines), timeout=60)
         if reply is None:
             return
         text = reply.get_text().strip()
-        
+
         if text == "0":
             return
-        
+
         try:
             position_level = int(text)
         except ValueError:
             await event.reply("请输入有效数字")
             return
-        
+
         if position_level not in JOB_POSITIONS:
             await event.reply("无效的职位等级")
             return
-        
+
+        position_info = JOB_POSITIONS[position_level]
+        current_postings = self._get_company_postings(company_id)
+        same_position_count = sum(1 for p in current_postings.values() if p["position_level"] == position_level)
+
+        if same_position_count >= 1:
+            await self._send_reply(
+                event,
+                f"该职位已在招聘中，请勿重复发布",
+                card_type="warning"
+            )
+            return
+
+        posting = self._add_job_posting(company_id, position_level)
+
         await self._send_reply(
             event,
-            f"✅ 招聘信息已发布！\n\n"
+            f"招聘信息已发布！\n\n"
             f"公司: {company['name']}\n"
-            f"职位: {JOB_POSITIONS[position_level]['name']}\n"
-            f"薪资: {JOB_POSITIONS[position_level]['salary']} 喵币/次\n"
+            f"职位: {position_info['name']}\n"
+            f"薪资: {position_info['salary']} 喵币/次\n"
             f"\n玩家可以到招聘市场申请该职位",
             card_type="success"
         )
@@ -5326,33 +5349,33 @@ class Main(BaseModule):
     async def _handle_view_applications(self, event, company_id: str, company: dict):
         apps = self._get_job_applications(company_id)
         pending_apps = {uid: app for uid, app in apps.items() if app["status"] == "pending"}
-        
+
         if not pending_apps:
             await event.reply("当前没有待处理的申请")
             return
-        
-        lines = ["📋 待处理申请\n"]
+
+        lines = ["待处理申请\n"]
         for i, (user_id, app) in enumerate(pending_apps.items(), 1):
             nick = self._get_nickname(user_id) or user_id
             position = JOB_POSITIONS.get(app["position"], {}).get("name", "未知")
             lines.append(f"{i}. {nick} - 申请: {position}")
-        
+
         lines.append("\n输入编号查看详情 (输入0返回):")
-        
+
         reply = await event.wait_reply("\n".join(lines), timeout=60)
         if reply is None:
             return
         text = reply.get_text().strip()
-        
+
         if text == "0":
             return
-        
+
         try:
             choice = int(text)
         except ValueError:
             await event.reply("请输入有效数字")
             return
-        
+
         user_ids = list(pending_apps.keys())
         if 1 <= choice <= len(user_ids):
             await self._handle_review_application(event, company_id, user_ids[choice - 1], company)
@@ -5362,21 +5385,21 @@ class Main(BaseModule):
     async def _handle_review_application(self, event, company_id: str, applicant_id: str, company: dict):
         apps = self._get_job_applications(company_id)
         app = apps.get(applicant_id)
-        
+
         if not app or app["status"] != "pending":
             await event.reply("申请不存在或已处理")
             return
-        
+
         nick = self._get_nickname(applicant_id) or applicant_id
         position = JOB_POSITIONS.get(app["position"], {}).get("name", "未知")
         attrs = self._get_attrs(applicant_id)
-        
+
         lines = [
-            f"👤 申请详情\n",
+            f"申请详情\n",
             f"申请人: {nick}",
             f"申请职位: {position}",
             f"申请时间: {time.strftime('%Y-%m-%d %H:%M', time.localtime(app['apply_time']))}",
-            f"\n📊 属性值",
+            f"\n属性值",
             f"智力: {attrs['int']}",
             f"体力: {attrs['hp']}",
             f"魅力: {attrs['cha']}",
@@ -5384,196 +5407,260 @@ class Main(BaseModule):
             f"2. 拒绝申请",
             f"\n0. 返回"
         ]
-        
+
         reply = await event.wait_reply("\n".join(lines), timeout=60)
         if reply is None:
             return
         text = reply.get_text().strip()
-        
+
         if text == "0":
             return
         elif text == "1":
+            position_level = app["position"]
+            position_info = JOB_POSITIONS[position_level]
+
+            current_employees = sum(1 for e in company["employees"].values() if e["position"] == position_level)
+
+            if current_employees >= position_info["max_employees"]:
+                await self._send_reply(
+                    event,
+                    f"该职位员工已满（最多{position_info['max_employees']}人）",
+                    card_type="warning"
+                )
+                return
+
             app["status"] = "accepted"
             apps[applicant_id] = app
             self._set_job_applications(company_id, apps)
-            
+
             company["employees"][applicant_id] = {
                 "position": app["position"],
-                "salary": JOB_POSITIONS[app["position"]]["salary"],
-                "join_time": time.time(),
-                "efficiency": 1.0,
+                "hire_time": time.time(),
+                "last_paid": time.time(),
+                "salary_paid": 0,
             }
             self._set_company(company_id, company)
-            
+
+            company_postings = self._get_company_postings(company_id)
+            for posting_id, posting in company_postings.items():
+                if posting["position_level"] == position_level:
+                    self._remove_job_posting(posting_id)
+                    break
+
             await self._send_reply(
                 event,
-                f"✅ 已接受 {nick} 的申请！\n"
-                f"职位: {position}",
+                f"已接受 {nick} 的申请！\n"
+                f"职位: {position}\n"
+                f"薪资: {position_info['salary']} 喵币/天（固定工资）",
                 card_type="success"
             )
         elif text == "2":
             app["status"] = "rejected"
             apps[applicant_id] = app
             self._set_job_applications(company_id, apps)
-            
-            await event.reply(f"❌ 已拒绝 {nick} 的申请")
+
+            await event.reply(f"已拒绝 {nick} 的申请")
         else:
             await event.reply("无效编号")
     
-    async def _handle_view_employees(self, event, company: dict):
+    async def _handle_view_employees(self, event, company_id: str, company: dict):
         if not company["employees"]:
             await event.reply("公司还没有员工")
             return
-        
-        lines = ["👥 员工列表\n"]
+
+        lines = ["员工列表\n"]
         for user_id, emp in company["employees"].items():
             nick = self._get_nickname(user_id) or user_id
             position = JOB_POSITIONS.get(emp["position"], {}).get("name", "未知")
-            lines.append(f"{nick} - {position} (薪资: {emp['salary']} 喵币)")
-        
+            hire_time = emp.get("hire_time", emp.get("join_time", time.time()))
+            days_worked = self._calculate_salary_days(hire_time)
+            position_level = emp["position"]
+            salary = JOB_POSITIONS[position_level]["salary"]
+            lines.append(f"{nick} - {position} (工作{days_worked}天, 薪资:{salary} 喵币/天)")
+
         await event.reply("\n".join(lines))
     
     async def _handle_job_market(self, event, user_id):
         while True:
-            lines = ["💼 招聘市场\n"]
+            lines = ["招聘市场\n"]
             lines.append("1. 查看所有招聘信息")
             lines.append("2. 查看我的申请")
             lines.append("3. 开始工作")
             lines.append("\n0. 返回")
-            
+
             reply = await event.wait_reply("\n".join(lines), timeout=60)
             if reply is None:
                 return
             text = reply.get_text().strip()
-            
+
             if text == "0":
                 return
             elif text == "1":
-                await self._handle_view_job_postings(event)
+                await self._handle_view_job_postings(event, user_id)
             elif text == "2":
                 await self._handle_view_my_applications(event, user_id)
             elif text == "3":
                 await self._handle_perform_company_work(event, user_id)
             else:
                 await event.reply("无效编号")
-    
-    async def _handle_view_job_postings(self, event):
-        companies = self._get_companies()
-        lines = ["📢 招聘信息\n"]
-        
-        count = 0
-        for company_id, company in companies.items():
-            apps = self._get_job_applications(company_id)
-            for user_id, app in apps.items():
-                if app["status"] == "pending":
-                    position = JOB_POSITIONS.get(app["position"], {}).get("name", "未知")
-                    lines.append(f"{count + 1}. {company['name']} - {position} ({JOB_POSITIONS[app['position']]['salary']} 喵币/次)")
-                    count += 1
-        
-        if count == 0:
+
+    async def _handle_view_job_postings(self, event, user_id: str):
+        postings = self._get_job_postings()
+        lines = ["招聘信息\n"]
+
+        postings_list = sorted(postings.values(), key=lambda x: x["post_time"], reverse=True)
+
+        for i, posting in enumerate(postings_list, 1):
+            lines.append(f"{i}. {posting['company_name']} - {posting['position_name']} ({posting['salary']} 喵币/次)")
+
+        if not postings_list:
             await event.reply("当前没有招聘信息")
             return
-        
+
         lines.append("\n输入编号申请职位 (输入0返回):")
-        
+
         reply = await event.wait_reply("\n".join(lines), timeout=60)
         if reply is None:
             return
         text = reply.get_text().strip()
-        
+
         if text == "0":
             return
-        
+
         try:
             choice = int(text)
         except ValueError:
             await event.reply("请输入有效数字")
             return
-        
-        if 1 <= choice <= count:
-            await self._handle_apply_job(event, choice)
+
+        if 1 <= choice <= len(postings_list):
+            await self._handle_apply_job(event, user_id, postings_list[choice - 1])
         else:
             await event.reply("无效编号")
     
-    async def _handle_apply_job(self, event, choice: int):
-        companies = self._get_companies()
-        postings = []
-        
-        for company_id, company in companies.items():
-            apps = self._get_job_applications(company_id)
-            for user_id, app in apps.items():
-                if app["status"] == "pending":
-                    postings.append({
-                        "company_id": company_id,
-                        "company_name": company["name"],
-                        "position": app["position"],
-                        "salary": JOB_POSITIONS[app["position"]]["salary"]
-                    })
-        
-        if 1 <= choice <= len(postings):
-            posting = postings[choice - 1]
-            
-            lines = [
-                f"📝 申请职位\n",
-                f"公司: {posting['company_name']}",
-                f"职位: {JOB_POSITIONS[posting['position']]['name']}",
-                f"薪资: {posting['salary']} 喵币/次",
-                f"\n确定要申请吗？（y/n）"
-            ]
-            
-            reply = await event.wait_reply("\n".join(lines), timeout=60)
-            if reply is None:
-                return
-            text = reply.get_text().strip().lower()
-            
-            if text == "y":
-                event_data = event.get_data()
-                user_id = event_data.get("user_id")
-                
-                existing = self._get_user_application(user_id)
-                if existing:
-                    await self._send_reply(
-                        event,
-                        f"你已有待处理的申请：{existing['company_name']}",
-                        card_type="warning"
-                    )
-                    return
-                
-                apps = self._get_job_applications(posting["company_id"])
-                apps[user_id] = {
-                    "position": posting["position"],
-                    "apply_time": time.time(),
-                    "status": "pending"
-                }
-                self._set_job_applications(posting["company_id"], apps)
-                
+    async def _handle_apply_job(self, event, user_id: str, posting: dict):
+        company = self._get_company(posting["company_id"])
+        if not company:
+            await event.reply("公司不存在")
+            return
+
+        position_info = JOB_POSITIONS[posting["position_level"]]
+        current_employees = sum(1 for e in company["employees"].values() if e["position"] == posting["position_level"])
+
+        if current_employees >= position_info["max_employees"]:
+            await self._send_reply(
+                event,
+                "该职位已满员",
+                card_type="warning"
+            )
+            self._remove_job_posting(posting["posting_id"])
+            return
+
+        attrs = self._get_attrs(user_id)
+        edu_level = self._get_edu(user_id)
+
+        if edu_level < position_info["req_edu"]:
+            await self._send_reply(
+                event,
+                f"学历要求不达标，需要{EDU_LEVELS[position_info['req_edu']]['name']}",
+                card_type="warning"
+            )
+            return
+
+        lines = [
+            f"申请职位\n",
+            f"公司: {posting['company_name']}",
+            f"职位: {posting['position_name']}",
+            f"薪资: {posting['salary']} 喵币/次",
+            f"固定工资周期: 每天",
+            f"\n确定要申请吗？（y/n）"
+        ]
+
+        reply = await event.wait_reply("\n".join(lines), timeout=60)
+        if reply is None:
+            return
+        text = reply.get_text().strip().lower()
+
+        if text == "y":
+            existing = self._get_user_application(user_id)
+            if existing:
                 await self._send_reply(
                     event,
-                    f"✅ 申请已提交！\n\n"
-                    f"公司: {posting['company_name']}\n"
-                    f"职位: {JOB_POSITIONS[posting['position']]['name']}\n"
-                    f"\n等待公司审核...",
-                    card_type="success"
+                    f"你已有待处理的申请：{existing['company_name']}",
+                    card_type="warning"
                 )
-        else:
-            await event.reply("无效编号")
+                return
+
+            existing_job = self._get_user_job(user_id)
+            if existing_job:
+                await self._send_reply(
+                    event,
+                    f"你已在 {existing_job['company_name']} 工作",
+                    card_type="warning"
+                )
+                return
+
+            apps = self._get_job_applications(posting["company_id"])
+            apps[user_id] = {
+                "position": posting["position_level"],
+                "apply_time": time.time(),
+                "status": "pending"
+            }
+            self._set_job_applications(posting["company_id"], apps)
+
+            await self._send_reply(
+                event,
+                f"申请已提交！\n\n"
+                f"公司: {posting['company_name']}\n"
+                f"职位: {posting['position_name']}\n"
+                f"\n等待公司审核...",
+                card_type="success"
+            )
     
     async def _handle_view_my_applications(self, event, user_id: str):
         existing = self._get_user_application(user_id)
-        
+
         if not existing:
-            await event.reply("你没有待处理的申请")
+            job = self._get_user_job(user_id)
+            if job:
+                company = self._get_company(job["company_id"])
+                if company:
+                    emp_data = company["employees"][user_id]
+                    position = JOB_POSITIONS.get(emp_data["position"], {}).get("name", "未知")
+                    days_worked = self._calculate_salary_days(emp_data["hire_time"])
+                    salary = JOB_POSITIONS[emp_data["position"]]["salary"]
+
+                    lines = [
+                        f"我的工作\n",
+                        f"公司: {job['company_name']}",
+                        f"职位: {position}",
+                        f"工作天数: {days_worked}天",
+                        f"薪资: {salary} 喵币/天",
+                        f"\n1. 离职",
+                        f"2. 返回"
+                    ]
+
+                    reply = await event.wait_reply("\n".join(lines), timeout=60)
+                    if reply is None:
+                        return
+                    text = reply.get_text().strip()
+
+                    if text == "1":
+                        await self._handle_resign(event, user_id)
+                    return
+            else:
+                await event.reply("你没有待处理的申请")
             return
-        
+
         position = JOB_POSITIONS.get(existing["application"]["position"], {}).get("name", "未知")
         lines = [
-            f"📋 我的申请\n",
+            f"我的申请\n",
             f"公司: {existing['company_name']}",
             f"职位: {position}",
             f"状态: 待审核",
-            f"\n你可以先去工作，审核通过后会自动入职"
+            f"\n等待公司审核..."
         ]
-        
+
         await event.reply("\n".join(lines))
     
     async def _handle_perform_company_work(self, event, user_id: str):
@@ -5596,7 +5683,7 @@ class Main(BaseModule):
             )
             return
         
-        lines = ["💼 我的工作\n"]
+        lines = ["我的工作\n"]
         for i, job in enumerate(my_jobs, 1):
             position = JOB_POSITIONS.get(job["employee_data"]["position"], {}).get("name", "未知")
             lines.append(f"{i}. {job['company_name']} - {position}")
@@ -5631,32 +5718,32 @@ class Main(BaseModule):
                 card_type="warning"
             )
             return
-        
+
         position_level = employee_data["position"]
         base_salary = JOB_POSITIONS[position_level]["salary"]
-        
+        bonus_earnings = int(base_salary * 0.5)
+
         attrs = self._get_attrs(user_id)
         stat_key = "int" if position_level <= 2 else ("hp" if position_level <= 3 else "cha")
         stat_val = attrs.get(stat_key, 10)
-        
+
         bonus = 0
         if stat_val >= 60:
-            bonus = int(base_salary * 0.15)
-        
-        total_earnings = base_salary + bonus
-        
+            bonus = int(bonus_earnings * 0.3)
+
+        total_earnings = bonus_earnings + bonus
+
         self._add_coins(user_id, total_earnings)
         self._set_cooldown(user_id, "work")
-        
+
         company = self._get_company(company_id)
-        if company:
-            company["cash"] -= total_earnings
-            self._set_company(company_id, company)
-        
+        company_name = company["name"] if company else "公司"
+
         await self._send_reply(
             event,
-            f"💼 工作完成！\n\n"
-            f"基础工资: {base_salary} 喵币\n"
+            f"工作完成！\n\n"
+            f"基础工资由公司定期发放\n"
+            f"本次工作奖励: {bonus_earnings} 喵币\n"
             f"属性加成: {bonus} 喵币\n"
             f"总收入: {total_earnings} 喵币",
             card_type="success"
@@ -5722,7 +5809,7 @@ class Main(BaseModule):
         price = prices.get(stock_name, company["share_price"])
         
         lines = [
-            f"📈 买入股票 - {company['name']}\n",
+            f"买入股票 - {company['name']}\n",
             f"当前股价: ¥{price}",
             f"公司现金: {company['cash']} 喵币",
             f"你的钱包: {self._get_coins(user_id)} 喵币",
@@ -5767,7 +5854,7 @@ class Main(BaseModule):
         
         await self._send_reply(
             event,
-            f"✅ 买入成功！\n\n"
+            f"买入成功！\n\n"
             f"股票: {stock_name}\n"
             f"数量: {qty}股\n"
             f"单价: ¥{price}\n"
@@ -5796,7 +5883,7 @@ class Main(BaseModule):
         price = prices.get(stock_name, company["share_price"])
         
         lines = [
-            f"📉 卖出股票 - {company['name']}\n",
+            f"卖出股票 - {company['name']}\n",
             f"当前股价: ¥{price}",
             f"持有数量: {held}股",
             f"\n请输入卖出数量 (输入0返回):"
@@ -5833,11 +5920,332 @@ class Main(BaseModule):
         
         await self._send_reply(
             event,
-            f"✅ 卖出成功！\n\n"
+            f"卖出成功！\n\n"
             f"股票: {stock_name}\n"
             f"数量: {qty}股\n"
             f"单价: ¥{price}\n"
             f"总收入: {revenue} 喵币\n"
             f"盈亏: {sign}{profit} 喵币",
+            card_type="success"
+        )
+
+    # =============================================================
+    #  招聘信息存储
+    # =============================================================
+
+    def _get_job_postings(self) -> dict:
+        postings = self.sdk.storage.get("nekocare_job_postings")
+        return postings if postings is not None else {}
+
+    def _set_job_postings(self, postings: dict):
+        self.sdk.storage.set("nekocare_job_postings", postings)
+
+    def _add_job_posting(self, company_id: str, position_level: int):
+        postings = self._get_job_postings()
+        company = self._get_company(company_id)
+        if not company:
+            return None
+
+        position_info = JOB_POSITIONS.get(position_level)
+        if not position_info:
+            return None
+
+        posting_id = f"{company_id}_{position_level}_{int(time.time())}"
+        posting = {
+            "posting_id": posting_id,
+            "company_id": company_id,
+            "company_name": company["name"],
+            "position_level": position_level,
+            "position_name": position_info["name"],
+            "salary": position_info["salary"],
+            "post_time": time.time()
+        }
+
+        postings[posting_id] = posting
+        self._set_job_postings(postings)
+        return posting
+
+    def _remove_job_posting(self, posting_id: str):
+        postings = self._get_job_postings()
+        if posting_id in postings:
+            del postings[posting_id]
+            self._set_job_postings(postings)
+
+    def _remove_company_postings(self, company_id: str):
+        postings = self._get_job_postings()
+        to_remove = [pid for pid, p in postings.items() if p["company_id"] == company_id]
+        for pid in to_remove:
+            del postings[pid]
+        self._set_job_postings(postings)
+
+    def _get_company_postings(self, company_id: str) -> dict:
+        postings = self._get_job_postings()
+        return {pid: p for pid, p in postings.items() if p["company_id"] == company_id}
+
+    def _get_user_job(self, user_id: str) -> Optional[dict]:
+        companies = self._get_companies()
+        for company_id, company in companies.items():
+            if user_id in company["employees"]:
+                employee_data = company["employees"][user_id]
+                return {
+                    "company_id": company_id,
+                    "company_name": company["name"],
+                    "position": employee_data["position"],
+                    "hire_time": employee_data["hire_time"]
+                }
+        return None
+
+    def _calculate_salary_days(self, hire_time: float) -> int:
+        now = time.time()
+        return int((now - hire_time) / COMPANY_SALARY_INTERVAL)
+
+    def _pay_employee_salary(self, company_id: str, company: dict, user_id: str, employee_data: dict):
+        now = time.time()
+        hire_time = employee_data["hire_time"]
+        last_paid = employee_data.get("last_paid", hire_time)
+
+        days_worked = int((now - last_paid) / COMPANY_SALARY_INTERVAL)
+
+        if days_worked <= 0:
+            return 0, False
+
+        position_level = employee_data["position"]
+        salary = JOB_POSITIONS[position_level]["salary"]
+        total_salary = salary * days_worked
+
+        if company["cash"] < total_salary:
+            return total_salary, False
+
+        company["cash"] -= total_salary
+        employee_data["last_paid"] = now
+        employee_data["salary_paid"] = employee_data.get("salary_paid", 0) + total_salary
+        company["employees"][user_id] = employee_data
+        self._set_company(company_id, company)
+
+        self._add_coins(user_id, total_salary)
+        return total_salary, True
+
+    async def _handle_employee_menu(self, event, company_id: str, company: dict):
+        while True:
+            lines = [
+                f"员工管理 - {company['name']}\n",
+                f"当前员工: {len(company['employees'])}人\n",
+                f"1. 查看员工列表",
+                f"2. 发放工资",
+                f"3. 劝退员工",
+                f"\n0. 返回"
+            ]
+
+            reply = await event.wait_reply("\n".join(lines), timeout=60)
+            if reply is None:
+                return
+            text = reply.get_text().strip()
+
+            if text == "0":
+                return
+            elif text == "1":
+                await self._handle_view_employees(event, company_id, company)
+                company = self._get_company(company_id)
+            elif text == "2":
+                await self._handle_pay_salaries(event, company_id, company)
+                company = self._get_company(company_id)
+            elif text == "3":
+                await self._handle_fire_employee(event, company_id, company)
+                company = self._get_company(company_id)
+            else:
+                await event.reply("无效编号")
+
+    async def _handle_pay_salaries(self, event, company_id: str, company: dict):
+        lines = [
+            f"发放工资 - {company['name']}\n",
+            f"公司现金: {company['cash']} 喵币\n"
+        ]
+
+        employees_to_pay = []
+        for user_id, employee_data in company["employees"].items():
+            now = time.time()
+            hire_time = employee_data["hire_time"]
+            last_paid = employee_data.get("last_paid", hire_time)
+            days_worked = int((now - last_paid) / COMPANY_SALARY_INTERVAL)
+
+            if days_worked > 0:
+                position_level = employee_data["position"]
+                salary = JOB_POSITIONS[position_level]["salary"]
+                total_salary = salary * days_worked
+                nick = self._get_nickname(user_id) or user_id
+                employees_to_pay.append({
+                    "user_id": user_id,
+                    "nick": nick,
+                    "days_worked": days_worked,
+                    "salary": total_salary
+                })
+
+        if not employees_to_pay:
+            lines.append("\n当前没有待发放的工资")
+            await event.reply("\n".join(lines))
+            return
+
+        lines.append("\n待发放工资：")
+        total_salary_needed = 0
+        for emp in employees_to_pay:
+            lines.append(f"{emp['nick']}: {emp['salary']} 喵币 ({emp['days_worked']}天)")
+            total_salary_needed += emp['salary']
+
+        lines.append(f"\n总计: {total_salary_needed} 喵币")
+        lines.append(f"\n确定要发放吗？（y/n）")
+
+        if total_salary_needed > company["cash"]:
+            await self._send_reply(
+                event,
+                f"公司现金不足，需要 {total_salary_needed} 喵币",
+                card_type="danger"
+            )
+            return
+
+        reply = await event.wait_reply("\n".join(lines), timeout=60)
+        if reply is None:
+            return
+        text = reply.get_text().strip().lower()
+
+        if text == "y":
+            for emp in employees_to_pay:
+                employee_data = company["employees"][emp["user_id"]]
+                now = time.time()
+                employee_data["last_paid"] = now
+                employee_data["salary_paid"] = employee_data.get("salary_paid", 0) + emp["salary"]
+                company["employees"][emp["user_id"]] = employee_data
+                self._add_coins(emp["user_id"], emp["salary"])
+
+            company["cash"] -= total_salary_needed
+            self._set_company(company_id, company)
+
+            await self._send_reply(
+                event,
+                f"工资发放成功！\n\n共 {len(employees_to_pay)} 人\n总计: {total_salary_needed} 喵币",
+                card_type="success"
+            )
+
+    async def _handle_fire_employee(self, event, company_id: str, company: dict):
+        employees = company["employees"]
+        if not employees:
+            await event.reply("公司暂无员工")
+            return
+
+        lines = ["选择要劝退的员工：\n"]
+        employees_list = []
+        for i, (user_id, employee_data) in enumerate(employees.items(), 1):
+            nick = self._get_nickname(user_id) or user_id
+            position = JOB_POSITIONS.get(employee_data["position"], {}).get("name", "未知")
+            hire_time = employee_data["hire_time"]
+            days_worked = self._calculate_salary_days(hire_time)
+            position_level = employee_data["position"]
+            salary = JOB_POSITIONS[position_level]["salary"]
+
+            compensation = salary * (days_worked + 1)
+            lines.append(f"{i}. {nick} - {position} (工作{days_worked}天)")
+            employees_list.append({
+                "user_id": user_id,
+                "nick": nick,
+                "position": position,
+                "days_worked": days_worked,
+                "compensation": compensation
+            })
+
+        lines.append("\n输入编号 (输入0返回):")
+
+        reply = await event.wait_reply("\n".join(lines), timeout=60)
+        if reply is None:
+            return
+        text = reply.get_text().strip()
+
+        if text == "0":
+            return
+
+        try:
+            choice = int(text)
+        except ValueError:
+            await event.reply("请输入有效数字")
+            return
+
+        if 1 <= choice <= len(employees_list):
+            emp = employees_list[choice - 1]
+
+            if company["cash"] < emp["compensation"]:
+                await self._send_reply(
+                    event,
+                    f"公司现金不足，需要支付 N+1 赔偿：{emp['compensation']} 喵币",
+                    card_type="danger"
+                )
+                return
+
+            confirm_lines = [
+                f"劝退员工\n\n",
+                f"员工: {emp['nick']}",
+                f"职位: {emp['position']}",
+                f"工作时间: {emp['days_worked']}天",
+                f"N+1赔偿: {emp['compensation']} 喵币",
+                f"\n确定要劝退吗？（y/n）"
+            ]
+
+            reply = await event.wait_reply("\n".join(confirm_lines), timeout=60)
+            if reply is None:
+                return
+            confirm_text = reply.get_text().strip().lower()
+
+            if confirm_text == "y":
+                company["cash"] -= emp["compensation"]
+                del company["employees"][emp["user_id"]]
+                self._set_company(company_id, company)
+                self._add_coins(emp["user_id"], emp["compensation"])
+
+                await self._send_reply(
+                    event,
+                    f"已劝退员工 {emp['nick']}\n\n"
+                    f"支付 N+1 赔偿: {emp['compensation']} 喵币",
+                    card_type="success"
+                )
+        else:
+            await event.reply("无效编号")
+
+    async def _handle_resign(self, event, user_id: str):
+        job = self._get_user_job(user_id)
+        if not job:
+            await event.reply("你当前没有工作")
+            return
+
+        company = self._get_company(job["company_id"])
+        if not company:
+            await event.reply("公司不存在")
+            return
+
+        employee_data = company["employees"][user_id]
+        days_worked = self._calculate_salary_days(employee_data["hire_time"])
+        position_level = employee_data["position"]
+        salary = JOB_POSITIONS[position_level]["salary"]
+        unpaid_salary = salary * days_worked
+
+        if unpaid_salary > 0:
+            if company["cash"] >= unpaid_salary:
+                company["cash"] -= unpaid_salary
+                self._add_coins(user_id, unpaid_salary)
+                salary_text = f"未发工资: {unpaid_salary} 喵币"
+            else:
+                await self._send_reply(
+                    event,
+                    "公司现金不足，无法结算工资",
+                    card_type="warning"
+                )
+                return
+        else:
+            salary_text = "无未发工资"
+
+        del company["employees"][user_id]
+        self._set_company(job["company_id"], company)
+
+        await self._send_reply(
+            event,
+            f"已离职\n\n"
+            f"公司: {job['company_name']}\n"
+            f"{salary_text}",
             card_type="success"
         )
