@@ -413,6 +413,29 @@ JOB_POSITIONS = {
 COMPANY_SALARY_INTERVAL = 86400
 COMPANY_MAX_POSITIONS_PER_COMPANY = 3
 
+NPC_EMPLOYEE_LEVELS = {
+    1: {"name": "新手", "salary": 30, "efficiency": 0.5, "rarity": 0.4},
+    2: {"name": "普通", "salary": 50, "efficiency": 0.7, "rarity": 0.3},
+    3: {"name": "熟练", "salary": 80, "efficiency": 1.0, "rarity": 0.15},
+    4: {"name": "精英", "salary": 120, "efficiency": 1.5, "rarity": 0.1},
+    5: {"name": "传奇", "salary": 200, "efficiency": 2.5, "rarity": 0.05},
+}
+
+NPC_EMPLOYEE_NAMES = [
+    "小棉花", "小雪球", "小团子", "小汤圆", "小糍粑",
+    "胖橘喵", "黑豆豆", "小花咪", "小奶牛", "小狸子",
+    "英短仔", "美短仔", "布偶咪", "波斯妮", "缅因哥",
+    "加菲宝", "无毛仔", "折耳妹", "暹罗弟", "豹小子",
+    "金金", "银银", "蓝蓝", "白白", "斑斑",
+]
+
+COMPANY_SETTLEMENT_HOUR = 0
+COMPANY_SLACK_CHANCE = 0.15
+COMPANY_LAZY_CHANCE = 0.1
+COMPANY_SLACK_PENALTY = 0.3
+COMPANY_LAZY_PENALTY = 0.5
+COMPANY_MAX_NPC_PER_COMPANY = 10
+
 BANK_INTEREST_REGULAR = 0.03
 BANK_INTEREST_FIXED = 0.08
 BANK_FIXED_TERM = 86400
@@ -4755,6 +4778,55 @@ class Main(BaseModule):
         self.sdk.storage.set("nekocare_company_counter", counter)
         return counter
     
+    def _get_all_companies(self) -> dict:
+        return self._get_companies()
+    
+    def _get_npc_employees(self, company_id: str) -> dict:
+        company = self._get_company(company_id)
+        if company:
+            return company.get("npc_employees", {})
+        return {}
+    
+    def _set_npc_employees(self, company_id: str, npc_employees: dict):
+        company = self._get_company(company_id)
+        if company:
+            company["npc_employees"] = npc_employees
+            self._set_company(company_id, company)
+    
+    def _generate_npc_employee(self, company_level: int) -> dict:
+        rarity_roll = random.random()
+        cumulative = 0
+        selected_level = 1
+        for level, data in NPC_EMPLOYEE_LEVELS.items():
+            cumulative += data["rarity"]
+            if rarity_roll <= cumulative:
+                selected_level = level
+                break
+        
+        level_data = NPC_EMPLOYEE_LEVELS[selected_level]
+        name = random.choice(NPC_EMPLOYEE_NAMES)
+        while name.endswith("的NPC"):
+            name = random.choice(NPC_EMPLOYEE_NAMES)
+        
+        efficiency_modifier = 1.0 + (company_level - 1) * 0.1
+        actual_efficiency = level_data["efficiency"] * efficiency_modifier
+        
+        return {
+            "name": f"{name}",
+            "level": selected_level,
+            "level_name": level_data["name"],
+            "base_salary": level_data["salary"],
+            "efficiency": actual_efficiency,
+            "hired_time": time.time(),
+            "total_earnings": 0,
+            "status": "active",
+        }
+    
+    def _get_npc_recruit_probability(self, company_level: int, npc_level: int) -> float:
+        base_prob = NPC_EMPLOYEE_LEVELS[npc_level]["rarity"]
+        level_bonus = company_level * 0.05
+        return min(base_prob + level_bonus, 0.8)
+    
     def _company_exists(self, name: str) -> bool:
         companies = self._get_companies()
         for company in companies.values():
@@ -4899,8 +4971,10 @@ class Main(BaseModule):
             "revenue": 0,
             "profit": 0,
             "employees": {},
+            "npc_employees": {},
             "dividend_ratio": 0.5,
             "last_dividend_time": 0,
+            "last_npc_settlement": 0,
             "market_sentiment": 0.0,
         }
         
@@ -4925,6 +4999,8 @@ class Main(BaseModule):
         type_data = COMPANY_TYPES[company["type"]]
         days_registered = int((time.time() - company["registered_time"]) / 86400)
         
+        npc_count = len(company.get("npc_employees", {}))
+        
         lines = [
             f"  {company['name']}\n",
             f"类型: {type_data['name']}",
@@ -4935,7 +5011,8 @@ class Main(BaseModule):
             f"累计收入: {company['revenue']} 喵币",
             f"累计利润: {company['profit']} 喵币",
             f"\n  公司规模",
-            f"员工数量: {len(company['employees'])}人",
+            f"玩家员工: {len(company['employees'])}人",
+            f"NPC员工: {npc_count}人",
         ]
         
         if company["listed"]:
@@ -5003,19 +5080,22 @@ class Main(BaseModule):
             return
         
         while True:
+            npc_count = len(company.get("npc_employees", {}))
             lines = [
                 f" 管理中心 - {company['name']}\n",
                 f"现金: {company['cash']} 喵币",
-                f"员工: {len(company['employees'])}人",
+                f"玩家员工: {len(company['employees'])}人 | NPC员工: {npc_count}人",
                 f"\n1. 公司详情",
-                f"2. 招聘员工",
+                f"2. 招聘玩家员工",
+                f"3. 招聘NPC员工",
+                f"4. NPC工资结算",
             ]
             
             if not company["listed"] and self._check_ipo_eligibility(company):
-                lines.append("3. 申请上市")
+                lines.append("5. 申请上市")
             
             if company["listed"]:
-                lines.append("3. 发放分红")
+                lines.append("5. 发放分红")
             
             lines.append("\n0. 返回")
             
@@ -5032,10 +5112,16 @@ class Main(BaseModule):
             elif text == "2":
                 await self._handle_recruit_employees(event, company_id, company)
                 company = self._get_company(company_id)
-            elif text == "3" and not company["listed"] and self._check_ipo_eligibility(company):
+            elif text == "3":
+                await self._handle_recruit_npc(event, company_id, company)
+                company = self._get_company(company_id)
+            elif text == "4":
+                await self._handle_settle_npc(event, company_id, company)
+                company = self._get_company(company_id)
+            elif text == "5" and not company["listed"] and self._check_ipo_eligibility(company):
                 await self._handle_company_ipo(event, company_id, company)
                 company = self._get_company(company_id)
-            elif text == "3" and company["listed"]:
+            elif text == "5" and company["listed"]:
                 await self._handle_company_dividend(event, company_id, company)
                 company = self._get_company(company_id)
             else:
@@ -5465,10 +5551,9 @@ class Main(BaseModule):
     
     async def _handle_view_employees(self, event, company_id: str, company: dict):
         if not company["employees"]:
-            await event.reply("公司还没有员工")
-            return
+            await event.reply("公司还没有玩家员工")
 
-        lines = ["员工列表\n"]
+        lines = ["玩家员工列表\n"]
         for user_id, emp in company["employees"].items():
             nick = self._get_nickname(user_id) or user_id
             position = JOB_POSITIONS.get(emp["position"], {}).get("name", "未知")
@@ -5479,6 +5564,200 @@ class Main(BaseModule):
             lines.append(f"{nick} - {position} (工作{days_worked}天, 薪资:{salary} 喵币/天)")
 
         await event.reply("\n".join(lines))
+    
+    async def _handle_recruit_npc(self, event, company_id: str, company: dict):
+        while True:
+            npc_employees = company.get("npc_employees", {})
+            max_npc = COMPANY_MAX_NPC_PER_COMPANY
+            
+            lines = [
+                f"招聘NPC员工 - {company['name']}\n",
+                f"当前NPC员工: {len(npc_employees)}/{max_npc}",
+                f"公司等级: {company['level']} (影响高稀有度NPC出现概率)",
+                f"\n1. 尝试招聘NPC",
+                f"2. 查看NPC员工列表",
+                f"3. 解雇NPC员工",
+                f"\n0. 返回"
+            ]
+            
+            reply = await event.wait_reply("\n".join(lines), timeout=60)
+            if reply is None:
+                return
+            text = reply.get_text().strip()
+            
+            if text == "0":
+                return
+            elif text == "1":
+                await self._recruit_single_npc(event, company_id, company)
+                company = self._get_company(company_id)
+            elif text == "2":
+                await self._handle_view_npc_employees(event, company_id, company)
+                company = self._get_company(company_id)
+            elif text == "3":
+                await self._handle_fire_npc(event, company_id, company)
+                company = self._get_company(company_id)
+            else:
+                await event.reply("无效编号")
+    
+    async def _recruit_single_npc(self, event, company_id: str, company: dict):
+        npc_employees = company.get("npc_employees", {})
+        
+        if len(npc_employees) >= COMPANY_MAX_NPC_PER_COMPANY:
+            await self._send_reply(
+                event,
+                f"NPC员工已达上限 ({COMPANY_MAX_NPC_PER_COMPANY}人)",
+                card_type="warning"
+            )
+            return
+        
+        roll = random.random()
+        selected_level = 1
+        cumulative = 0
+        for level, data in NPC_EMPLOYEE_LEVELS.items():
+            prob = self._get_npc_recruit_probability(company["level"], level)
+            cumulative += prob
+            if roll <= cumulative:
+                selected_level = level
+                break
+        
+        npc = self._generate_npc_employee(company["level"])
+        npc["level"] = selected_level
+        level_data = NPC_EMPLOYEE_LEVELS[selected_level]
+        npc["level_name"] = level_data["name"]
+        npc["base_salary"] = level_data["salary"]
+        
+        npc_id = f"npc_{int(time.time() * 1000)}_{random.randint(1000, 9999)}"
+        npc_employees[npc_id] = npc
+        
+        company["npc_employees"] = npc_employees
+        self._set_company(company_id, company)
+        
+        efficiency_pct = int(npc["efficiency"] * 100)
+        await self._send_reply(
+            event,
+            f"🎉 招聘成功！\n\n"
+            f"NPC: {npc['name']}\n"
+            f"等级: {npc['level_name']} (稀有度: {level_data['rarity']*100:.0f}%)\n"
+            f"效率: {efficiency_pct}%\n"
+            f"薪资: {npc['base_salary']} 喵币/天\n\n"
+            f"公司等级越高，越容易招募到高稀有度NPC！",
+            card_type="success"
+        )
+    
+    async def _handle_view_npc_employees(self, event, company_id: str, company: dict):
+        npc_employees = company.get("npc_employees", {})
+        
+        if not npc_employees:
+            await event.reply("公司还没有NPC员工")
+            return
+        
+        lines = ["NPC员工列表\n"]
+        total_efficiency = 0
+        total_salary = 0
+        for i, (npc_id, npc) in enumerate(npc_employees.items(), 1):
+            status_emoji = "✓" if npc.get("status") == "active" else "⚠️"
+            days_hired = int((time.time() - npc.get("hired_time", time.time())) / 86400)
+            efficiency_pct = int(npc.get("efficiency", 1.0) * 100)
+            lines.append(
+                f"{i}. {npc['name']} [{npc['level_name']}] {status_emoji}\n"
+                f"   效率:{efficiency_pct}% 薪资:{npc['base_salary']} 喵币/天 入职{days_hired}天"
+            )
+            total_efficiency += npc.get("efficiency", 1.0)
+            total_salary += npc.get("base_salary", 0)
+        
+        lines.append(f"\n总计: {len(npc_employees)}人")
+        lines.append(f"总效率: {int(total_efficiency * 100)}%")
+        lines.append(f"总薪资: {total_salary} 喵币/天")
+        
+        await event.reply("\n".join(lines))
+    
+    async def _handle_fire_npc(self, event, company_id: str, company: dict):
+        npc_employees = company.get("npc_employees", {})
+        
+        if not npc_employees:
+            await event.reply("没有NPC员工可以解雇")
+            return
+        
+        lines = ["解雇NPC员工\n"]
+        for i, (npc_id, npc) in enumerate(npc_employees.items(), 1):
+            efficiency_pct = int(npc.get("efficiency", 1.0) * 100)
+            lines.append(f"{i}. {npc['name']} [{npc['level_name']}] 效率:{efficiency_pct}%")
+        
+        lines.append("\n输入编号解雇 (输入0返回):")
+        
+        reply = await event.wait_reply("\n".join(lines), timeout=60)
+        if reply is None:
+            return
+        text = reply.get_text().strip()
+        
+        if text == "0":
+            return
+        
+        try:
+            choice = int(text)
+        except ValueError:
+            await event.reply("请输入有效数字")
+            return
+        
+        npc_ids = list(npc_employees.keys())
+        if 1 <= choice <= len(npc_ids):
+            npc_id = npc_ids[choice - 1]
+            npc = npc_employees[npc_id]
+            del npc_employees[npc_id]
+            company["npc_employees"] = npc_employees
+            self._set_company(company_id, company)
+            await self._send_reply(
+                event,
+                f"已解雇 {npc['name']} [{npc['level_name']}]",
+                card_type="success"
+            )
+        else:
+            await event.reply("无效编号")
+    
+    async def _handle_settle_npc(self, event, company_id: str, company: dict):
+        npc_employees = company.get("npc_employees", {})
+        
+        if not npc_employees:
+            await event.reply("没有NPC员工需要结算")
+            return
+        
+        result = self._daily_settlement_npc(company_id)
+        
+        if not result["success"]:
+            await self._send_reply(
+                event,
+                result["message"],
+                card_type="warning"
+            )
+            return
+        
+        stats = result.get("stats", {})
+        total_salary = result.get("total_salary", 0)
+        total_revenue = result.get("total_revenue", 0)
+        
+        company = self._get_company(company_id)
+        
+        lines = [
+            f"💰 NPC员工工资结算 - {company['name']}\n",
+            f"现金: {company['cash']} 喵币",
+            f"\n结算结果：",
+            f"正常员工: {stats.get('normal', 0)}人",
+            f"摸鱼员工: {stats.get('slacking', 0)}人",
+            f"懒惰员工: {stats.get('lazy', 0)}人",
+            f"因没钱被解雇: {stats.get('fired', 0)}人",
+            f"\n总支出: {total_salary} 喵币",
+            f"总收入: {total_revenue} 喵币",
+            f"净利润: {total_revenue - total_salary} 喵币",
+        ]
+        
+        if stats.get('slacking', 0) > 0 or stats.get('lazy', 0) > 0:
+            lines.append("\n⚠️ 部分员工摸鱼/懒惰，收益减少！")
+        
+        await self._send_reply(
+            event,
+            "\n".join(lines),
+            card_type="success" if total_revenue > total_salary else "warning"
+        )
     
     async def _handle_job_market(self, event, user_id):
         while True:
@@ -6030,6 +6309,111 @@ class Main(BaseModule):
 
         self._add_coins(user_id, total_salary)
         return total_salary, True
+    
+    def _pay_npc_salary(self, company_id: str, company: dict, npc_id: str, npc_data: dict) -> Tuple[int, bool, str]:
+        now = time.time()
+        last_paid = npc_data.get("last_paid", npc_data.get("hired_time", now))
+        
+        days_worked = int((now - last_paid) / COMPANY_SALARY_INTERVAL)
+        
+        if days_worked <= 0:
+            return 0, False, "normal"
+        
+        base_salary = npc_data.get("base_salary", 50)
+        efficiency = npc_data.get("efficiency", 1.0)
+        status = npc_data.get("status", "active")
+        
+        total_salary = base_salary * days_worked
+        
+        if company["cash"] < total_salary:
+            return total_salary, False, "normal"
+        
+        slack_chance = COMPANY_SLACK_CHANCE
+        lazy_chance = COMPANY_LAZY_CHANCE
+        
+        if status == "slacking":
+            slack_chance *= 2
+            lazy_chance *= 2
+        
+        roll = random.random()
+        actual_salary = total_salary
+        work_status = "normal"
+        
+        if roll < lazy_chance:
+            actual_salary = int(total_salary * COMPANY_LAZY_PENALTY)
+            work_status = "lazy"
+            npc_data["status"] = "slacking"
+        elif roll < slack_chance + lazy_chance:
+            actual_salary = int(total_salary * COMPANY_SLACK_PENALTY)
+            work_status = "slacking"
+            npc_data["status"] = "slacking"
+        
+        revenue = int(actual_salary * efficiency * 2)
+        profit = revenue - actual_salary
+        
+        company["cash"] -= actual_salary
+        company["revenue"] = company.get("revenue", 0) + revenue
+        company["profit"] = company.get("profit", 0) + profit
+        
+        npc_data["last_paid"] = now
+        npc_data["total_earnings"] = npc_data.get("total_earnings", 0) + actual_salary
+        
+        npc_employees = company.get("npc_employees", {})
+        npc_employees[npc_id] = npc_data
+        company["npc_employees"] = npc_employees
+        self._set_company(company_id, company)
+        
+        return actual_salary, True, work_status
+    
+    def _daily_settlement_npc(self, company_id: str) -> dict:
+        company = self._get_company(company_id)
+        if not company:
+            return {"success": False, "message": "公司不存在"}
+        
+        npc_employees = company.get("npc_employees", {})
+        if not npc_employees:
+            return {"success": True, "message": "没有NPC员工", "stats": {}}
+        
+        now = time.time()
+        last_settlement = company.get("last_npc_settlement", 0)
+        
+        if (now - last_settlement) < COMPANY_SALARY_INTERVAL:
+            return {"success": False, "message": "结算周期未到"}
+        
+        total_salary = 0
+        total_revenue = 0
+        stats = {
+            "normal": 0,
+            "slacking": 0,
+            "lazy": 0,
+            "fired": 0,
+        }
+        
+        for npc_id, npc_data in list(npc_employees.items()):
+            salary, success, work_status = self._pay_npc_salary(company_id, company, npc_id, npc_data)
+            
+            if success:
+                total_salary += salary
+                efficiency = npc_data.get("efficiency", 1.0)
+                revenue = int(salary * efficiency * 2)
+                total_revenue += revenue
+                stats[work_status] = stats.get(work_status, 0) + 1
+            else:
+                if company["cash"] < npc_data.get("base_salary", 50):
+                    del npc_employees[npc_id]
+                    stats["fired"] += 1
+        
+        company["last_npc_settlement"] = now
+        company["npc_employees"] = npc_employees
+        self._set_company(company_id, company)
+        
+        return {
+            "success": True,
+            "message": f"结算完成",
+            "stats": stats,
+            "total_salary": total_salary,
+            "total_revenue": total_revenue,
+        }
 
     async def _handle_employee_menu(self, event, company_id: str, company: dict):
         while True:
