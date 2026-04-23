@@ -721,6 +721,327 @@ HELP_TEXT = (
     "重新领养: 扣33%喵币、学历清零、属性重置、银行清空"
 )
 
+COMMENTARY_VOCABS = {
+    "赛跑": {
+        "start": {
+            "opening": ["比赛开始！", "各就各位——跑！", "枪声响起！", "出发！", "起跑！"],
+            "action": ["冲了出去", "飞奔而出", "猛地窜出去", "像离弦之箭般冲出", "弹射起步"],
+            "emoji": ["🏃", "💨", "⚡", "🚀", "🏁"]
+        },
+        "overtake": {
+            "subject": ["突然", "眨眼间", "一刹那", "就在这时", "令人惊叹的是"],
+            "action": ["反超了", "超越了", "冲到了前面", "拉开了距离", "占据了领先位置"],
+            "desc": ["像一道闪电", "如离弦之箭", "仿佛开了挂", "速度惊人", "气势如虹"],
+            "emoji": ["😱", "🔥", "✨", "💪", "👏"]
+        },
+        "fall_behind": {
+            "subject": ["可惜的是", "不妙的是", "让人担心的是", "危机时刻"],
+            "action": ["落后了", "被拉开了差距", "掉到了后面", "节奏被打乱了"],
+            "reason": ["体力不支", "状态下滑", "受到干扰", "出现失误"],
+            "emoji": ["😰", "😿", "💦", "😫"]
+        },
+        "mistake": {
+            "cause": ["被路边的蝴蝶吸引了", "被自己的尾巴绊倒了", "踩到了香蕉皮", "被一块石头绊住", "突然停下来发呆"],
+            "result": ["停了下来", "摔了个跟头", "落后了一大截", "浪费了宝贵时间"],
+            "emoji": ["🦋", "🍌", "💥", "😿", "😵"]
+        },
+        "sprint": {
+            "opening": ["最后冲刺！", "最后一圈！", "决胜时刻！", "终点就在眼前！"],
+            "action": ["全力加速", "拼尽全力", "爆发出惊人速度", "开启二段加速"],
+            "desc": ["气势如虹", "势不可挡", "火力全开", "燃烧小宇宙"],
+            "emoji": ["🔥", "💪", "⚡", "🚀", "🏆"]
+        },
+        "finish": {
+            "first": ["率先冲线！", "获得冠军！", "太强了！", "完美收官！", "实至名归！"],
+            "runner_up": ["获得亚军！", "惜败！", "也超棒了！", "表现不错！"],
+            "third": ["获得季军！", "也登上领奖台了！", "继续加油！"],
+            "other": ["完成比赛！", "安全完赛！", "尽力了！"],
+            "emoji": ["🥇", "🥈", "🥉", "🏆", "🎉"]
+        },
+        "progress_good": {
+            "subject": ["表现优异", "效率惊人", "干劲十足", "火力全开"],
+            "action": ["完成了大量工作", "效率极高", "产出丰富", "业绩突出"],
+            "desc": ["像开了挂一样", "如有神助", "让人佩服", "实至名归"],
+            "emoji": ["🔥", "📈", "💪", "✨", "👏"]
+        },
+        "egg_events": [
+            "【{cat}】突然被路边的鱼干吸引了，差点忘记在比赛！🐟",
+            "裁判被【{cat}】的可爱迷倒了，差点忘了计时！😍",
+            "【{cat}】路过一只流浪猫，追上去打了个招呼！😺",
+            "【{cat}】打了个喷嚏，反而加速了！🤧💨",
+            "【{cat}】突然跳上栏杆，像跑酷一样前进！🤸",
+            "【{cat}】被观众席上的小鱼干诱惑了！🐟😋",
+            "【{cat}】追着自己的尾巴转了一圈，然后继续跑！🌀",
+            "【{cat}】和路边的一只小猫击了个掌！👏😺",
+            "【{cat}】突然停下来舔了舔毛，然后像火箭一样冲出去！🚀",
+            "【{cat}】被一只蝴蝶追着跑，反而加速了！🦋💨"
+        ],
+        "slow_motion": [
+            "\n🎬【慢动作回放】说个小秘密：刚刚【{cat}】{action}，发生了这个小插曲！😂",
+            "\n🎬【独家画面】大家没注意到吧，【{cat}】{action}，太搞笑了！🤣",
+            "\n🎬【精彩瞬间】回放一下：【{cat}】{action}，这就是喵星人的魅力！😹"
+        ],
+        "slow_motion_actions": [
+            "追蝴蝶的时候差点撞树",
+            "被自己的尾巴绊了一下然后假装没发生",
+            "路过鱼店时闻到了香味停顿了0.1秒",
+            "和路边的野猫对视了三秒",
+            "跑着跑着突然想打个哈欠但忍住了",
+            "被观众的相机闪光灯吓了一跳",
+            "踩到了自己的前爪",
+            "看到一只虫子想抓但忍住了",
+            "跑的时候口水流出来了",
+            "尾巴像螺旋桨一样转着跑"
+        ]
+    },
+    "捉迷藏": {
+        "start": {
+            "opening": ["捉迷藏开始！", "躲好了吗？我来了！", "寻找开始！"],
+            "hider_action": ["迅速躲了起来", "找了个绝佳位置", "消失在角落里", "融入了环境"],
+            "seeker_action": ["开始寻找", "四处张望", "仔细搜索", "展开搜寻"],
+            "action": ["开始游戏", "投入游戏", "全力以赴", "认真游戏"],
+            "emoji": ["🙈", "🔍", "👀", "😎", "🎯"]
+        },
+        "found": {
+            "subject": ["发现了！", "找到了！", "在这里！", "抓到了！"],
+            "action": ["找到了", "发现了", "抓住了", "揪出来了"],
+            "location": ["躲在箱子后面", "藏在树丛里", "缩在角落", "躲在窗帘后"],
+            "emoji": ["😲", "🎉", "👏", "✨", "😂"]
+        },
+        "hide_well": {
+            "subject": ["太狡猾了", "藏得真好", "令人惊讶的是", "不可思议"],
+            "action": ["一直没被找到", "成功躲过", "隐藏得很深", "完美隐身"],
+            "reason": ["位置太隐蔽", "伪装太完美", "运气太好", "技巧高超"],
+            "emoji": ["🤫", "😏", "👍", "🙌", "😎"]
+        },
+        "almost_found": {
+            "subject": ["险些被发现", "差点暴露", "惊险时刻", "千钧一发"],
+            "action": ["躲过一劫", "幸运逃脱", "及时转移", "巧妙避开"],
+            "emoji": ["😰", "😅", "😮", "💦", "🤭"]
+        },
+        "overtake": {
+            "subject": ["突然", "眨眼间", "一刹那", "就在这时", "令人惊叹的是"],
+            "action": ["超越了", "发现了", "找到了", "抓住了"],
+            "desc": ["像鹰眼一样", "如侦探般", "仿佛开了透视", "观察力惊人"],
+            "emoji": ["😱", "🔥", "✨", "💪", "👏"]
+        },
+        "fall_behind": {
+            "subject": ["可惜的是", "不妙的是", "让人担心的是", "危机时刻"],
+            "action": ["找不到", "被发现了", "暴露了", "位置不妙"],
+            "reason": ["藏得不好", "运气不佳", "被发现了", "时间不够"],
+            "emoji": ["😰", "😿", "💦", "😫"]
+        },
+        "mistake": {
+            "cause": ["被路边的蝴蝶吸引了", "被自己的尾巴绊倒了", "踩到了香蕉皮", "被一块石头绊住", "突然停下来发呆"],
+            "result": ["暴露了", "被发现了", "找到了", "浪费了时间"],
+            "emoji": ["🦋", "🍌", "💥", "😿", "😵"]
+        },
+        "finish": {
+            "first": ["最佳躲藏！", "躲藏大师！", "无人能找！", "最会躲猫猫！"],
+            "runner_up": ["表现不错！", "也很厉害！", "继续加油！"],
+            "third": ["找到了！", "也完成了！", "尽力了！"],
+            "other": ["完成比赛！", "安全完赛！", "尽力了！"],
+            "emoji": ["🏆", "🥇", "👑", "🎯", "⭐"]
+        },
+        "progress_good": {
+            "subject": ["表现优异", "效率惊人", "干劲十足", "火力全开"],
+            "action": ["躲得很好", "找得很快", "游戏技巧高", "表现出色"],
+            "desc": ["像开了挂一样", "如有神助", "让人佩服", "实至名归"],
+            "emoji": ["🔥", "📈", "💪", "✨", "👏"]
+        },
+        "egg_events": [
+            "【{cat}】躲得好好的，突然打了个喷嚏暴露了！🤧😂",
+            "【{cat}】被一只虫子飞到鼻子上，差点叫出来！🪰😰",
+            "【{cat}】躲在箱子里睡着了！😴💤",
+            "【{cat}】躲得太好，连自己都找不到自己了！🤔😂",
+            "【{cat}】被路过的流浪猫发现了，一起躲了起来！😺🙈",
+            "【{cat}】躲在鱼店后面，被香味诱惑想出来！🐟😋",
+            "【{cat}】为了躲避，钻进了狗窝！🐕😱",
+            "【{cat}】躲在树上，结果被鸟围观了！🐦👀",
+            "【{cat}】躲在垃圾桶后面，被清洁工发现了！🗑️😅",
+            "【{cat}】躲在沙发底下，被吸尘器吓到了！🧹😱"
+        ],
+        "slow_motion": [
+            "\n🎬【慢动作回放】说个小秘密：刚刚【{cat}】{action}，发生了这个小插曲！😂",
+            "\n🎬【独家画面】大家没注意到吧，【{cat}】{action}，太搞笑了！🤣",
+            "\n🎬【精彩瞬间】回放一下：【{cat}】{action}，这就是喵星人的魅力！😹"
+        ],
+        "slow_motion_actions": [
+            "躲的时候尾巴露在外面晃来晃去",
+            "被找到时吓了一跳跳了起来",
+            "躲在箱子后面呼噜声太大差点暴露",
+            "为了隐藏把自己埋在树叶里",
+            "躲的时候踩到了一片树叶发出声音",
+            "被找到时一脸懵圈",
+            "躲在床底下结果被灰尘呛到",
+            "为了不被发现憋气憋得脸都红了",
+            "躲在窗帘后面结果被窗帘缠住了",
+            "躲的时候追着自己的尾巴玩"
+        ]
+    },
+    "打工竞赛": {
+        "start": {
+            "opening": ["打工竞赛开始！", "努力赚钱吧！", "工作时间到！", "加油干！"],
+            "action": ["开始工作", "投入工作", "全力以赴", "认真干活"],
+            "emoji": ["💼", "💰", "💪", "🏃", "📊"]
+        },
+        "overtake": {
+            "subject": ["突然", "眨眼间", "一刹那", "就在这时", "令人惊叹的是"],
+            "action": ["反超了", "超越了", "赶上了", "超过了"],
+            "desc": ["工作效率惊人", "如开挂一般", "业绩突出", "让人佩服"],
+            "emoji": ["😱", "🔥", "✨", "💪", "👏"]
+        },
+        "fall_behind": {
+            "subject": ["可惜的是", "不妙的是", "让人担心的是", "危机时刻"],
+            "action": ["落后了", "被拉开了差距", "掉到了后面", "效率下滑"],
+            "reason": ["疲劳了", "分心了", "遇到障碍", "状态不佳"],
+            "emoji": ["😰", "😿", "💦", "😫"]
+        },
+        "progress_good": {
+            "subject": ["表现优异", "效率惊人", "干劲十足", "火力全开"],
+            "action": ["完成了大量工作", "效率极高", "产出丰富", "业绩突出"],
+            "desc": ["像开了挂一样", "如有神助", "让人佩服", "实至名归"],
+            "emoji": ["🔥", "📈", "💪", "✨", "👏"]
+        },
+        "progress_bad": {
+            "subject": ["状态不佳", "效率下滑", "遇到困难", "进展缓慢"],
+            "action": ["工作拖沓", "效率低下", "卡壳了", "出现问题"],
+            "reason": ["疲劳了", "分心了", "遇到障碍", "运气不好"],
+            "emoji": ["😰", "😫", "😓", "💦", "😿"]
+        },
+        "mistake": {
+            "cause": ["被路边的蝴蝶吸引了", "被自己的尾巴绊倒了", "踩到了香蕉皮", "被一块石头绊住", "突然停下来发呆"],
+            "result": ["停了下来", "摔了个跟头", "落后了一大截", "浪费了宝贵时间"],
+            "emoji": ["🦋", "🍌", "💥", "😿", "😵"]
+        },
+        "sprint": {
+            "opening": ["最后冲刺！", "最后一小时！", "决胜时刻！", "即将结束！"],
+            "action": ["全力加速", "拼尽全力", "爆发出惊人效率", "开启二段加速"],
+            "desc": ["气势如虹", "势不可挡", "火力全开", "燃烧小宇宙"],
+            "emoji": ["🔥", "💪", "⚡", "🚀", "🏆"]
+        },
+        "finish": {
+            "first": ["赚钱最多！", "打工之王！", "效率之神！", "财富积累者！"],
+            "runner_up": ["表现不错！", "也很厉害！", "继续加油！"],
+            "third": ["完成了！", "也完成了！", "尽力了！"],
+            "other": ["完成比赛！", "安全完赛！", "尽力了！"],
+            "emoji": ["💰", "🏆", "🥇", "💎", "📈"]
+        },
+        "egg_events": [
+            "【{cat}】工作的时候追着鼠标玩，老板看呆了！🖱️😂",
+            "【{cat}】在键盘上踩了一串乱码，居然提交了正确答案！⌨️😹",
+            "【{cat}】喝水的时候睡着了，杯子里的水流到文件上了！💧😅",
+            "【{cat}】被打印机的声音吸引，盯着看了十分钟！🖨️😺",
+            "【{cat}】工作时被鱼干外卖诱惑，差点订了外卖！🐟😋",
+            "【{cat}】把老板的文件当猫抓板用了！📄😱",
+            "【{cat}】工作累了在椅子上做起了猫式瑜伽！🧘😴",
+            "【{cat}】被吸尘器吸引，跟着吸尘器到处跑！🧹😂",
+            "【{cat}】工作时把咖啡打翻了，居然用文件吸干了！☕😅",
+            "【{cat}】在办公室抓了一只老鼠，老板很高兴！🐁🎉"
+        ],
+        "slow_motion": [
+            "\n🎬【慢动作回放】说个小秘密：刚刚【{cat}】{action}，发生了这个小插曲！😂",
+            "\n🎬【独家画面】大家没注意到吧，【{cat}】{action}，太搞笑了！🤣",
+            "\n🎬【精彩瞬间】回放一下：【{cat}】{action}，这就是喵星人的魅力！😹"
+        ],
+        "slow_motion_actions": [
+            "工作时突然追自己的尾巴",
+            "把老板的咖啡当成自己的喝了",
+            "在键盘上打滚然后假装在工作",
+            "工作时追着窗外的小鸟看",
+            "把文件堆成猫窝",
+            "工作时在椅子上磨爪子",
+            "被打印机出来的纸吓了一跳",
+            "把电脑屏幕当镜子照",
+            "工作时突然想打哈欠但憋住了",
+            "把笔当玩具拍来拍去"
+        ]
+    },
+    "钓鱼比赛": {
+        "start": {
+            "opening": ["钓鱼比赛开始！", "钓鱼时间到！", "收杆准备！", "垂钓时刻！"],
+            "action": ["开始钓鱼", "下竿了", "抛出鱼线", "开始等待"],
+            "emoji": ["🎣", "🐟", "🌊", "⏰", "🎯"]
+        },
+        "overtake": {
+            "subject": ["突然", "眨眼间", "一刹那", "就在这时", "令人惊叹的是"],
+            "action": ["反超了", "超越了", "赶上了", "超过了"],
+            "desc": ["钓技惊人", "如开挂一般", "收获丰富", "让人佩服"],
+            "emoji": ["😱", "🔥", "✨", "💪", "👏"]
+        },
+        "fall_behind": {
+            "subject": ["可惜的是", "不妙的是", "让人担心的是", "危机时刻"],
+            "action": ["落后了", "被拉开了差距", "掉到了后面", "收获不佳"],
+            "reason": ["运气不好", "技术不佳", "鱼跑了", "状态下滑"],
+            "emoji": ["😰", "😿", "💦", "😫"]
+        },
+        "catch_fish": {
+            "size": ["大鱼！", "小鱼！", "中号鱼！", "巨型鱼！"],
+            "action": ["钓到了", "拉上来了", "成功捕获", "收杆了"],
+            "desc": ["很有分量", "个头不小", "运气不错", "技术高超"],
+            "emoji": ["🐠", "🐟", "🦈", "🎉", "👏"]
+        },
+        "miss": {
+            "reason": ["鱼跑了", "鱼脱钩了", "没咬钩", "线断了"],
+            "desc": ["可惜了", "太遗憾了", "差一点", "运气不好"],
+            "emoji": ["😿", "😢", "😰", "💔", "😩"]
+        },
+        "mistake": {
+            "cause": ["被路边的蝴蝶吸引了", "被自己的尾巴绊倒了", "踩到了香蕉皮", "被一块石头绊住", "突然停下来发呆"],
+            "result": ["停了下来", "摔了个跟头", "落后了一大截", "浪费了宝贵时间"],
+            "emoji": ["🦋", "🍌", "💥", "😿", "😵"]
+        },
+        "sprint": {
+            "opening": ["最后冲刺！", "最后一刻！", "决胜时刻！", "即将收杆！"],
+            "action": ["全力加速", "拼尽全力", "爆发出惊人效率", "开启二段加速"],
+            "desc": ["气势如虹", "势不可挡", "火力全开", "燃烧小宇宙"],
+            "emoji": ["🔥", "💪", "⚡", "🚀", "🏆"]
+        },
+        "finish": {
+            "first": ["钓鱼大师！", "收获最多！", "运气爆棚！", "技术一流！"],
+            "runner_up": ["表现不错！", "也很厉害！", "继续加油！"],
+            "third": ["完成了！", "也完成了！", "尽力了！"],
+            "other": ["完成比赛！", "安全完赛！", "尽力了！"],
+            "emoji": ["🏆", "🥇", "🎣", "🐟", "⭐"]
+        },
+        "progress_good": {
+            "subject": ["表现优异", "效率惊人", "干劲十足", "火力全开"],
+            "action": ["完成了大量工作", "效率极高", "产出丰富", "业绩突出"],
+            "desc": ["像开了挂一样", "如有神助", "让人佩服", "实至名归"],
+            "emoji": ["🔥", "📈", "💪", "✨", "👏"]
+        },
+        "egg_events": [
+            "【{cat}】等鱼的时候睡着了，鱼竿差点掉水里！😴💦",
+            "【{cat}】钓到了一只靴子！👢😂",
+            "【{cat}】被水里的鱼嘲笑，追鱼去了！🐟😠",
+            "【{cat}】看到鱼跃出水面，兴奋地跳进水里了！💦😱",
+            "【{cat}】钓到了一只乌龟，乌龟跟它说话了！🐢😺",
+            "【{cat}】等鱼的时候追着蝴蝶玩了！🦋😂",
+            "【{cat}】鱼竿被鱼拖走了，【{cat}】追着鱼跑！🏃💨",
+            "【{cat}】钓到了一只水草！🌿😅",
+            "【{cat}】看到水里有倒影，跟自己打招呼！😺👋",
+            "【{cat}】被路边的鸭子吸引了，想抓鸭子！🦆😂"
+        ],
+        "slow_motion": [
+            "\n🎬【慢动作回放】说个小秘密：刚刚【{cat}】{action}，发生了这个小插曲！😂",
+            "\n🎬【独家画面】大家没注意到吧，【{cat}】{action}，太搞笑了！🤣",
+            "\n🎬【精彩瞬间】回放一下：【{cat}】{action}，这就是喵星人的魅力！😹"
+        ],
+        "slow_motion_actions": [
+            "钓鱼时追着自己的鱼线玩",
+            "看到鱼跃出水面吓了一跳掉进水里",
+            "等鱼时把鱼竿当玩具",
+            "钓到鱼时太兴奋掉进水里",
+            "被水里的倒影迷惑了",
+            "钓鱼时追着水鸟看",
+            "等鱼时在岸边打瞌睡",
+            "鱼咬钩时被吓了一跳",
+            "把鱼饵吃掉了",
+            "跟钓上来的鱼打招呼"
+        ]
+    }
+}
+
 CARD_THEMES = {
     "menu": {
         "accent": "#D4D4AA",
@@ -1801,13 +2122,162 @@ class Main(BaseModule):
                 card_type="info"
             )
 
+    def _generate_commentary(self, game_type: str, player_scores: dict) -> str:
+        if game_type not in COMMENTARY_VOCABS:
+            return ""
+        
+        vocabs = COMMENTARY_VOCABS[game_type]
+        sorted_players = sorted(player_scores.items(), key=lambda x: x[1], reverse=True)
+        
+        # 获取玩家信息
+        player_info = []
+        for user_id, score in sorted_players:
+            nick = self.sdk.storage.get(f"nekocare_nickname:{user_id}") or user_id
+            cat = self._get_cat(user_id)
+            cat_name = cat["name"] if cat else "未知猫猫"
+            player_info.append({
+                "user_id": user_id,
+                "nick": nick,
+                "cat": cat_name,
+                "score": score
+            })
+        
+        commentary = []
+        
+        # ========== 1. 开始阶段 ==========
+        opening = random.choice(vocabs["start"]["opening"])
+        commentary.append(opening)
+        
+        for i, info in enumerate(player_info):
+            action = random.choice(vocabs["start"]["action"])
+            emoji = random.choice(vocabs["start"]["emoji"])
+            
+            if game_type == "赛跑":
+                commentary.append(f"【{info['cat']}】{action}！{emoji}")
+            elif game_type == "捉迷藏":
+                if i == 0:
+                    # 第一个是寻找者
+                    action = random.choice(vocabs["start"]["seeker_action"])
+                    commentary.append(f"【{info['cat']}】负责寻找，{action}！{emoji}")
+                else:
+                    action = random.choice(vocabs["start"]["hider_action"])
+                    commentary.append(f"【{info['cat']}】{action}！{emoji}")
+            elif game_type == "打工竞赛":
+                commentary.append(f"【{info['cat']}】{action}！{emoji}")
+            elif game_type == "钓鱼比赛":
+                commentary.append(f"【{info['cat']}】{action}！{emoji}")
+        
+        commentary.append("")  # 空行分隔
+        
+        # ========== 2. 比赛过程阶段（生成5-8个事件）==========
+        event_count = random.randint(5, 8)
+        
+        for event_idx in range(event_count):
+            # 随机选择事件类型
+            event_type = random.choice(["overtake", "fall_behind", "mistake", "good_performance"])
+            
+            if event_type == "overtake" and len(player_info) >= 2:
+                # 超越事件
+                p1_idx = random.randint(0, len(player_info) - 1)
+                p2_idx = (p1_idx + 1) % len(player_info)
+                
+                subject = random.choice(vocabs["overtake"]["subject"])
+                action = random.choice(vocabs["overtake"]["action"])
+                desc = random.choice(vocabs["overtake"]["desc"])
+                emoji = random.choice(vocabs["overtake"]["emoji"])
+                
+                commentary.append(f"{subject}【{player_info[p1_idx]['cat']}】{action}【{player_info[p2_idx]['cat']}】，{desc}！{emoji}")
+                
+            elif event_type == "fall_behind" and len(player_info) >= 2:
+                # 落后事件
+                idx = random.randint(0, len(player_info) - 1)
+                
+                subject = random.choice(vocabs["fall_behind"]["subject"])
+                action = random.choice(vocabs["fall_behind"]["action"])
+                reason = random.choice(vocabs["fall_behind"]["reason"])
+                emoji = random.choice(vocabs["fall_behind"]["emoji"])
+                
+                commentary.append(f"{subject}【{player_info[idx]['cat']}】{action}，{reason}！{emoji}")
+                
+            elif event_type == "mistake":
+                # 失误事件
+                idx = random.randint(0, len(player_info) - 1)
+                
+                cause = random.choice(vocabs["mistake"]["cause"])
+                result = random.choice(vocabs["mistake"]["result"])
+                emoji = random.choice(vocabs["mistake"]["emoji"])
+                
+                commentary.append(f"【{player_info[idx]['cat']}】{cause}，{result}！{emoji}")
+                
+            elif event_type == "good_performance":
+                # 表现优异
+                idx = random.randint(0, len(player_info) - 1)
+                
+                if game_type == "赛跑" or game_type == "打工竞赛" or game_type == "钓鱼比赛":
+                    subject = random.choice(vocabs["progress_good"]["subject"])
+                    action = random.choice(vocabs["progress_good"]["action"])
+                    desc = random.choice(vocabs["progress_good"]["desc"])
+                    emoji = random.choice(vocabs["progress_good"]["emoji"])
+                    
+                    commentary.append(f"{subject}！【{player_info[idx]['cat']}】{action}，{desc}！{emoji}")
+        
+        # ========== 3. 冲刺/高潮阶段 ==========
+        if game_type == "赛跑":
+            opening = random.choice(vocabs["sprint"]["opening"])
+            commentary.append(f"\n{opening}")
+            
+            for info in player_info:
+                action = random.choice(vocabs["sprint"]["action"])
+                desc = random.choice(vocabs["sprint"]["desc"])
+                emoji = random.choice(vocabs["sprint"]["emoji"])
+                commentary.append(f"【{info['cat']}】{action}，{desc}！{emoji}")
+        
+        commentary.append("")  # 空行分隔
+        
+        # ========== 4. 结束阶段 ==========
+        commentary.append("比赛结果")
+        
+        for i, info in enumerate(player_info):
+            emoji = random.choice(vocabs["finish"]["emoji"])
+            
+            if i == 0:
+                text = random.choice(vocabs["finish"]["first"])
+            elif i == 1:
+                text = random.choice(vocabs["finish"]["runner_up"])
+            elif i == 2:
+                text = random.choice(vocabs["finish"]["third"])
+            else:
+                text = random.choice(vocabs["finish"]["other"])
+            
+            commentary.append(f"{text}【{info['nick']}】的【{info['cat']}】获得 {info['score']} 分！{emoji}")
+        
+        # ========== 5. 彩蛋事件（5%概率）==========
+        if random.random() < 0.05:
+            egg_count = random.randint(1, 2)  # 1-2个彩蛋
+            commentary.append("\n🎉 精彩瞬间！")
+            
+            for _ in range(egg_count):
+                idx = random.randint(0, len(player_info) - 1)
+                cat_name = player_info[idx]["cat"]
+                egg_event = random.choice(vocabs["egg_events"])
+                commentary.append(egg_event.format(cat=cat_name))
+        
+        # ========== 6. 慢动作回放（1%概率）==========
+        if random.random() < 0.01:
+            idx = random.randint(0, len(player_info) - 1)
+            cat_name = player_info[idx]["cat"]
+            action = random.choice(vocabs["slow_motion_actions"])
+            slow_motion = random.choice(vocabs["slow_motion"])
+            commentary.append(slow_motion.format(cat=cat_name, action=action))
+        
+        return "\n".join(commentary)
+
     async def _run_competition(self, event, host_id, game_type, invite):
         game_config = MULTIPLAYER_GAMES[game_type]
         players = invite["players"]
         entry_fee = game_config["entry_fee"]
         reward = int(entry_fee * game_config["reward_multiplier"])
 
-        results = [f"=== {game_type} 结果 ===\n"]
         player_results = {}
 
         for player_id in players:
@@ -1834,24 +2304,20 @@ class Main(BaseModule):
             await self._send_reply(event, "没有玩家完成任务，退还押金~", card_type="warning")
             return
 
+        # 生成解说文本
+        commentary = self._generate_commentary(game_type, player_results)
+        
         sorted_results = sorted(player_results.items(), key=lambda x: x[1], reverse=True)
 
         rewards = {0: reward, 1: int(reward * 0.6), 2: int(reward * 0.3)}
-        medals = {0: "🥇", 1: "🥈", 2: "🥉"}
 
         for i, (player_id, score) in enumerate(sorted_results):
-            nick = self.sdk.storage.get(f"nekocare_nickname:{player_id}") or player_id
-            cat = self._get_cat(player_id)
-            cat_name = cat["name"] if cat else "?"
-            medal = medals.get(i, f"{i + 1}.")
             prize = rewards.get(i, 0)
-
             self._add_coins(player_id, prize)
             self._inc_stat(player_id, "contest_count")
 
-            results.append(f"{medal} {nick} | {cat_name} | {score}分 | +{prize}喵币")
-
-        await self._send_reply(event, "\n".join(results), card_type="success")
+        # 发送解说文本
+        await self._send_reply(event, commentary, card_type="success")
 
         game_invites = self._get_game_invites(game_type)
         game_invites = [inv for inv in game_invites if inv["host_id"] != host_id or set(inv["players"]) != set(players)]
@@ -2016,7 +2482,6 @@ class Main(BaseModule):
         for p in players:
             self._add_coins(p, -entry_fee)
 
-        results = [f"=== {game_type} 组队赛 ===\n"]
         player_results = {}
 
         for player_id in players:
@@ -2042,23 +2507,19 @@ class Main(BaseModule):
             await self._send_reply(event, "没有玩家完成游戏，退还押金~", card_type="warning")
             return
 
+        # 生成解说文本
+        commentary = self._generate_commentary(game_type, player_results)
+        
         sorted_results = sorted(player_results.items(), key=lambda x: x[1], reverse=True)
         rewards = {0: reward, 1: int(reward * 0.6), 2: int(reward * 0.3)}
-        medals = {0: "🥇", 1: "🥈", 2: "🥉"}
 
         for i, (player_id, score) in enumerate(sorted_results):
-            nick = self.sdk.storage.get(f"nekocare_nickname:{player_id}") or player_id
-            cat = self._get_cat(player_id)
-            cat_name = cat["name"] if cat else "?"
-            medal = medals.get(i, f"{i + 1}.")
             prize = rewards.get(i, 0)
-
             self._add_coins(player_id, prize)
             self._inc_stat(player_id, "contest_count")
 
-            results.append(f"{medal} {nick} | {cat_name} | {score}分 | +{prize}喵币")
-
-        await self._send_reply(event, "\n".join(results), card_type="success")
+        # 发送解说文本
+        await self._send_reply(event, commentary, card_type="success")
 
     async def _handle_scavenge(self, event, user_id):
         cat_data, status = self._apply_hunger_decay(user_id)
